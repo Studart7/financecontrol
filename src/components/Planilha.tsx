@@ -1,8 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Icons } from '../lib/icons';
 import { motion } from 'motion/react';
+import { useFinance } from '../context/FinanceContext';
 
 export const Planilha: React.FC = () => {
+  const { transactions, goals } = useFinance();
+  const [statusFilter, setStatusFilter] = useState('all'); // all, pago, pendente
+
+  // Ensuring we compute totalGasto consistently from goals as Metas.tsx does
+  const enrichedGoals = goals.map(goal => {
+    const categoryTransactions = transactions.filter(t => t.cat.toLowerCase() === goal.title.toLowerCase());
+    const val = categoryTransactions.reduce((acc, curr) => acc + curr.val, 0);
+    return { ...goal, val };
+  });
+
+  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
+  const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
+
+  const filteredData = transactions.filter(item => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'pago') return item.status === 'Liquidado';
+    if (statusFilter === 'pendente') return item.status === 'Pendente';
+    return true;
+  });
+
   return (
     <motion.main 
       initial={{ opacity: 0, y: 20 }}
@@ -35,54 +57,35 @@ export const Planilha: React.FC = () => {
               <Icons.Payment size={18} />
               <span className="font-body text-[10px] uppercase font-bold tracking-widest">Total Geral</span>
             </div>
-            <div className="text-3xl font-bold font-headline text-primary">R$ 12.450,00</div>
+            <div className="text-3xl font-bold font-headline text-primary">R$ {totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
           </div>
           <div className="mt-4 pt-4 border-t border-outline-variant/30">
             <div className="h-1.5 w-full bg-surface-container-low rounded-full overflow-hidden">
-              <div className="h-full bg-primary w-3/4 rounded-full"></div>
+              <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${Math.min(totalProgress, 100)}%` }}></div>
             </div>
-            <span className="text-[10px] text-secondary mt-1 block">75% da meta mensal</span>
+            <span className="text-[10px] text-secondary mt-1 block">{Math.round(totalProgress)}% da meta mensal</span>
           </div>
         </div>
 
-        <div className="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div className="p-2 bg-white/50 rounded-lg">
-              <Icons.Alimentacao className="text-tertiary" size={24} />
+        {goals.slice(0, 3).map((goal, i) => {
+          const catTransactions = transactions.filter(t => t.cat.toLowerCase() === goal.title.toLowerCase());
+          const catTotal = catTransactions.reduce((acc, curr) => acc + curr.val, 0);
+          const CatIcon = Icons[goal.iconKey as keyof typeof Icons] || Icons.Outros;
+          return (
+            <div key={i} className="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                <div className={`p-2 bg-white/50 rounded-lg`}>
+                  <CatIcon className={goal.iconColor} size={24} />
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-tighter ${goal.iconColor}`}>{goal.title}</span>
+              </div>
+              <div className="mt-6">
+                <p className="text-secondary font-body text-xs uppercase mb-1">Total</p>
+                <p className="text-2xl font-bold font-headline text-on-surface">R$ {catTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              </div>
             </div>
-            <span className="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Variável</span>
-          </div>
-          <div className="mt-6">
-            <p className="text-secondary font-body text-xs uppercase mb-1">Alimentação</p>
-            <p className="text-2xl font-bold font-headline text-on-surface">R$ 2.850,00</p>
-          </div>
-        </div>
-
-        <div className="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div className="p-2 bg-white/50 rounded-lg">
-              <Icons.Transporte className="text-tertiary" size={24} />
-            </div>
-            <span className="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Logística</span>
-          </div>
-          <div className="mt-6">
-            <p className="text-secondary font-body text-xs uppercase mb-1">Transporte</p>
-            <p className="text-2xl font-bold font-headline text-on-surface">R$ 920,00</p>
-          </div>
-        </div>
-
-        <div className="bg-surface-container-low p-6 rounded-xl flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div className="p-2 bg-white/50 rounded-lg">
-              <Icons.Outros className="text-tertiary" size={24} />
-            </div>
-            <span className="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Diversos</span>
-          </div>
-          <div className="mt-6">
-            <p className="text-secondary font-body text-xs uppercase mb-1">Outros</p>
-            <p className="text-2xl font-bold font-headline text-on-surface">R$ 1.420,00</p>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Ledger Table Section */}
@@ -91,12 +94,27 @@ export const Planilha: React.FC = () => {
           <div className="flex gap-6 items-center">
             <select className="bg-surface-container-low px-4 py-2 border-b-2 border-outline-variant text-sm font-medium focus:border-primary outline-none rounded-t">
               <option>Todas as Categorias</option>
-              <option>Alimentação</option>
-              <option>Transporte</option>
+              {goals.map(g => <option key={g.id}>{g.title}</option>)}
             </select>
-            <select className="bg-surface-container-low px-4 py-2 border-b-2 border-outline-variant text-sm font-medium focus:border-primary outline-none rounded-t">
-              <option>Período: Outubro 2024</option>
-            </select>
+             <div className="flex gap-2">
+               <button 
+                onClick={() => setStatusFilter('all')} 
+                className={`font-body text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${statusFilter === 'all' ? 'bg-secondary/20 text-on-surface' : 'text-secondary hover:text-on-surface'}`}
+               >
+                Todos
+               </button>
+               <button 
+                onClick={() => setStatusFilter('pago')} 
+                className={`font-body text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${statusFilter === 'pago' ? 'bg-primary/20 text-primary' : 'text-secondary hover:text-on-surface'}`}
+               >
+                Concluídos
+               </button>
+               <button 
+                onClick={() => setStatusFilter('pendente')} className={`font-body text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-md transition-colors ${statusFilter === 'pendente' ? 'bg-error/20 text-error' : 'text-secondary hover:text-on-surface'}`}
+               >
+                Pendentes
+               </button>
+             </div>
           </div>
           <div className="flex items-center gap-3 bg-surface-container-low rounded-lg px-3 py-1.5 border border-outline-variant/10">
             <Icons.Search className="text-secondary" size={18} />
@@ -109,7 +127,7 @@ export const Planilha: React.FC = () => {
             <thead className="bg-surface-container-low/50">
               <tr>
                 <th className="px-8 py-4 font-headline text-xs uppercase tracking-widest text-secondary font-bold">Data</th>
-                <th className="px-6 py-4 font-headline text-xs uppercase tracking-widest text-secondary font-bold">Estabelecimento</th>
+                <th className="px-6 py-4 font-headline text-xs uppercase tracking-widest text-secondary font-bold">Descrição</th>
                 <th className="px-6 py-4 font-headline text-xs uppercase tracking-widest text-secondary font-bold">Categoria</th>
                 <th className="px-6 py-4 font-headline text-xs uppercase tracking-widest text-secondary font-bold">Valor</th>
                 <th className="px-6 py-4 font-headline text-xs uppercase tracking-widest text-secondary font-bold">Status</th>
@@ -117,18 +135,15 @@ export const Planilha: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
-              {[
-                { date: '24 Out 2024', name: 'Pão de Açúcar', cat: 'Alimentação', val: 'R$ 482,50', status: 'Liquidado', icon: Icons.ShoppingBag },
-                { date: '22 Out 2024', name: 'Uber Viagens', cat: 'Transporte', val: 'R$ 45,90', status: 'Liquidado', icon: Icons.Transporte },
-                { date: '20 Out 2024', name: 'Starbucks Reserve', cat: 'Alimentação', val: 'R$ 32,00', status: 'Pendente', icon: Icons.Alimentacao },
-                { date: '19 Out 2024', name: 'SmartFit', cat: 'Saúde', val: 'R$ 119,90', status: 'Liquidado', icon: Icons.History },
-              ].map((row, i) => (
-                <tr key={i} className="hover:bg-surface-container-lowest/40 transition-colors group">
+              {filteredData.map((row) => {
+                const RowIcon = Icons[row.iconKey as keyof typeof Icons] || Icons.Outros;
+                return (
+                <tr key={row.id} className="hover:bg-surface-container-lowest/40 transition-colors group">
                   <td className="px-8 py-5 font-body text-sm text-secondary">{row.date}</td>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-surface-variant flex items-center justify-center">
-                        <row.icon className="text-primary" size={14} />
+                         <RowIcon className="text-primary" size={14} />
                       </div>
                       <span className="font-semibold text-on-surface">{row.name}</span>
                     </div>
@@ -136,10 +151,14 @@ export const Planilha: React.FC = () => {
                   <td className="px-6 py-5">
                     <span className="px-2 py-1 bg-surface-variant text-tertiary text-[10px] font-bold uppercase rounded">{row.cat}</span>
                   </td>
-                  <td className="px-6 py-5 font-headline font-bold text-on-surface">{row.val}</td>
+                  <td className="px-6 py-5 font-headline font-bold text-on-surface">
+                    <span className="">
+                      - R$ {row.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </td>
                   <td className="px-6 py-5">
-                    <div className="flex items-center gap-1.5 text-xs text-secondary">
-                      <span className={`w-1.5 h-1.5 rounded-full ${row.status === 'Liquidado' ? 'bg-green-600' : 'bg-orange-400'}`}></span>
+                    <div className="flex items-center gap-1.5 text-xs text-secondary font-bold uppercase tracking-wider">
+                      <span className={`w-1.5 h-1.5 rounded-full ${row.status === 'Liquidado' ? 'bg-primary' : 'bg-error'}`}></span>
                       {row.status}
                     </div>
                   </td>
@@ -152,18 +171,21 @@ export const Planilha: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )})}
+              {filteredData.length === 0 && (
+                <tr>
+                   <td colSpan={6} className="px-8 py-10 text-center text-sm font-body text-secondary">Nenhum lançamento encontrado.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="px-8 py-4 bg-surface-container-low/30 border-t border-outline-variant/10 flex justify-between items-center">
-          <span className="text-xs text-secondary font-body">Mostrando 4 de 128 lançamentos</span>
+          <span className="text-xs text-secondary font-body">Mostrando {filteredData.length} de {transactions.length} lançamentos</span>
           <div className="flex gap-2">
             <button className="p-1 hover:bg-surface-container-low rounded transition-colors"><Icons.ChevronLeft size={16}/></button>
             <button className="px-3 py-1 bg-primary text-white rounded text-xs font-bold">1</button>
-            <button className="px-3 py-1 hover:bg-surface-container-low rounded text-xs text-secondary">2</button>
-            <button className="px-3 py-1 hover:bg-surface-container-low rounded text-xs text-secondary">3</button>
             <button className="p-1 hover:bg-surface-container-low rounded transition-colors"><Icons.ChevronRight size={16}/></button>
           </div>
         </div>
@@ -173,35 +195,32 @@ export const Planilha: React.FC = () => {
         <div className="bg-surface-container-low p-8 rounded-xl">
           <h3 className="text-lg font-bold font-headline text-primary mb-6">Pacing Orçamentário</h3>
           <div className="space-y-6">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-xs font-bold text-secondary uppercase font-body">Fixos</span>
-                <span className="text-xs font-bold text-primary">R$ 4.200 / R$ 5.000</span>
-              </div>
-              <div className="h-2 w-full bg-surface-variant rounded-full">
-                <div className="h-full bg-tertiary rounded-full" style={{ width: '84%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-xs font-bold text-secondary uppercase font-body">Lazer</span>
-                <span className="text-xs font-bold text-primary">R$ 1.150 / R$ 1.200</span>
-              </div>
-              <div className="h-2 w-full bg-surface-variant rounded-full">
-                <div className="h-full bg-primary-container rounded-full" style={{ width: '95%' }}></div>
-              </div>
-            </div>
+            {goals.slice(0,3).map(goal => {
+               const spent = transactions.filter(t => t.cat.toLowerCase() === goal.title.toLowerCase()).reduce((a,c) => a + c.val, 0);
+               const progress = goal.meta > 0 ? Math.min((spent / goal.meta) * 100, 100) : 0;
+               return (
+                  <div key={goal.id}>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-xs font-bold text-secondary uppercase font-body">{goal.title}</span>
+                      <span className="text-xs font-bold text-primary">R$ {spent.toLocaleString('pt-BR')} / R$ {goal.meta.toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="h-2 w-full bg-surface-variant rounded-full overflow-hidden">
+                      <div className={`h-full ${spent > goal.meta ? 'bg-error' : 'bg-tertiary'} rounded-full`} style={{ width: `${progress}%` }}></div>
+                    </div>
+                  </div>
+               )
+            })}
           </div>
         </div>
 
         <div className="md:col-span-2 relative overflow-hidden rounded-xl bg-surface-variant">
           <img 
-            className="w-full h-full object-cover opacity-80 mix-blend-multiply" 
+            className="w-full h-full object-cover opacity-80 mix-blend-multiply transition-transform duration-700 hover:scale-105" 
             src="https://picsum.photos/seed/finance/1200/600" 
             alt="Finance"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-surface-variant/80 to-transparent p-10 flex flex-col justify-center">
+          <div className="absolute inset-0 bg-gradient-to-r from-surface-variant/90 to-transparent p-10 flex flex-col justify-center">
             <h2 className="text-3xl font-bold font-headline text-primary leading-tight mb-2">Seu futuro está sendo<br/>escrito agora.</h2>
             <p className="text-secondary max-w-xs font-body text-sm leading-relaxed">Continue registrando seus dados para gerar relatórios de tendência e previsibilidade patrimonial.</p>
           </div>
