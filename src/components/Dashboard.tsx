@@ -84,10 +84,8 @@ export const Dashboard: React.FC = () => {
           <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mt-1">Resumo Financeiro</h1>
         </div>
         <div className="flex gap-3">
-          <button className="bg-surface-container-low px-6 py-2 rounded font-body text-sm font-semibold text-secondary hover:bg-surface-variant transition-colors">Exportar PDF</button>
-          <button className="bg-gradient-to-br from-primary to-primary-container px-6 py-2 rounded font-body text-sm font-semibold text-white hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm">
-            <Icons.Add size={18} />
-            Nova Transação
+          <button className="bg-gradient-to-br from-primary to-primary-container px-8 py-2 rounded font-body text-sm font-bold text-white hover:opacity-90 transition-opacity shadow-md">
+            Exportar PDF
           </button>
         </div>
       </header>
@@ -202,10 +200,10 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {[
-          { label: 'Média Diária', val: `R$ ${Math.round(totalGasto / 30)}`, icon: Icons.Inicio },
+          { label: 'Média Diária', val: `R$ ${Math.round(totalGasto / 30)}`, icon: Icons.Inicio, border: 'border-b-2 border-primary' },
           { label: 'Maior Gasto (Dia)', val: 'R$ 600,00', icon: Icons.ShoppingBag, border: 'border-b-2 border-primary' },
-          { label: 'Freq. Transações', val: `${transactions.length} no mês`, icon: Icons.History },
-          { label: 'Economia Projetada', val: 'R$ 320,00', icon: Icons.Metas, color: 'text-tertiary' },
+          { label: 'Freq. Transações', val: `${transactions.length} no mês`, icon: Icons.History, border: 'border-b-2 border-primary' },
+          { label: 'Economia Projetada', val: 'R$ 320,00', icon: Icons.Metas, color: 'text-tertiary', border: 'border-b-2 border-primary' },
         ].map((card, i) => (
           <div key={i} className={`bg-surface-container-low p-6 rounded-lg flex flex-col gap-2 ${card.border || ''}`}>
             <card.icon className={card.color || 'text-secondary'} size={20} />

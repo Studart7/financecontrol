@@ -29,6 +29,7 @@ interface FinanceContextData {
   updateGoal: (id: number, data: Partial<Goal>) => void;
   deleteGoal: (id: number) => void;
   addTransaction: (tx: Transaction) => void;
+  updateTransaction: (id: number, data: Partial<Transaction>) => void;
   removeTransaction: (id: number) => void;
   acceptedRecommendations: string[];
   acceptRecommendation: (id: string, goalUpdate?: () => void) => void;
@@ -70,6 +71,9 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const deleteGoal = (id: number) => setGoals(goals.filter(g => g.id !== id));
   
   const addTransaction = (tx: Transaction) => setTransactions([tx, ...transactions]);
+  const updateTransaction = (id: number, data: Partial<Transaction>) => {
+    setTransactions(transactions.map(t => t.id === id ? { ...t, ...data } : t));
+  };
   const removeTransaction = (id: number) => setTransactions(transactions.filter(t => t.id !== id));
 
   const acceptRecommendation = (id: string, goalUpdate?: () => void) => {
@@ -80,7 +84,7 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
   return (
     <FinanceContext.Provider value={{
       transactions, goals, addGoal, updateGoal, deleteGoal,
-      addTransaction, removeTransaction, acceptedRecommendations, acceptRecommendation
+      addTransaction, updateTransaction, removeTransaction, acceptedRecommendations, acceptRecommendation
     }}>
       {children}
     </FinanceContext.Provider>

@@ -21,7 +21,24 @@
 
 @layer base {
   body {
-    @apply bg-surface text-on-surface font-body;
+    @apply bg-surface text-on-surface font-body transition-colors duration-300;
+  }
+
+  /* Modo escuro - Sobreposição das cores do tema */
+  .dark {
+    --color-primary: #ffb4a9;
+    --color-primary-container: #772b25;
+    --color-secondary: #e6c1bc;
+    --color-surface: #1a1110;
+    --color-surface-variant: #524442;
+    --color-surface-dim: #100b0a;
+    --color-surface-container-low: #1f1614;
+    --color-surface-container-lowest: #000000;
+    --color-on-surface: #fae1dd;
+    --color-outline-variant: #524442;
+    --color-tertiary: #f0c09d;
+    --color-tertiary-container: #5d3c26;
+    --color-error: #ffb4ab;
   }
 }
 
