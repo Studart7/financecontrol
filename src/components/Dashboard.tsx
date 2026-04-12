@@ -84,7 +84,8 @@ export const Dashboard: React.FC = () => {
           <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mt-1">Resumo Financeiro</h1>
         </div>
         <div className="flex gap-3">
-          <button className="bg-gradient-to-br from-primary to-primary-container px-8 py-2 rounded font-body text-sm font-bold text-white hover:opacity-90 transition-opacity shadow-md">
+          <button className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+            <Icons.Download size={20} />
             Exportar PDF
           </button>
         </div>

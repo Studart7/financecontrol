@@ -163,7 +163,7 @@ export const Metas: React.FC = () => {
             </div>
             <button 
               onClick={openNewGoalModal}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-semibold rounded-lg shadow-sm hover:bg-primary-container transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
             >
               <Icons.Add size={20} />
               Nova Meta
@@ -269,7 +269,7 @@ export const Metas: React.FC = () => {
                       </div>
                       <h4 className="text-lg font-headline font-bold text-on-surface mb-2">Reforço do Fundo de Emergência</h4>
                       <p className="text-sm text-secondary mb-6">Com base no seu saldo atual, sugerimos alocar R$ {Math.round(200 * mult)} extras este mês para atingir sua meta de segurança 2 meses antes.</p>
-                      <button onClick={handleAcceptEmergencyFund} className="w-full py-2.5 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primary-container transition-colors flex items-center justify-center gap-2">
+                      <button onClick={handleAcceptEmergencyFund} className="w-full py-2.5 bg-primary text-surface-container-lowest font-bold text-sm rounded-lg hover:bg-primary-container transition-colors flex items-center justify-center gap-2">
                         <Icons.Check size={18} />
                         Aceitar Meta
                       </button>
@@ -286,7 +286,7 @@ export const Metas: React.FC = () => {
                       </div>
                       <h4 className="text-lg font-headline font-bold text-on-surface mb-2">Economize R$ {Math.round(100 * mult)} em Jantares</h4>
                       <p className="text-sm text-secondary mb-6">Seus gastos com restaurantes aumentaram. Reduzir um jantar fora por semana economizará R$ {Math.round(100 * mult)} para sua próxima viagem.</p>
-                      <button onClick={handleAcceptDinnerSavings} className="w-full py-2.5 bg-tertiary text-white font-bold text-sm rounded-lg hover:bg-tertiary-container transition-colors flex items-center justify-center gap-2">
+                      <button onClick={handleAcceptDinnerSavings} className="w-full py-2.5 bg-tertiary text-surface-container-lowest font-bold text-sm rounded-lg hover:bg-tertiary-container transition-colors flex items-center justify-center gap-2">
                         <Icons.Check size={18} />
                         Aceitar Meta
                       </button>
@@ -377,7 +377,7 @@ export const Metas: React.FC = () => {
                 <button onClick={() => setIsGoalModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-secondary hover:bg-surface-container-low rounded-lg transition-colors">
                   Cancelar
                 </button>
-                <button onClick={saveGoal} className="px-5 py-2.5 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary-container transition-colors shadow-sm">
+                <button onClick={saveGoal} className="px-5 py-2.5 text-sm font-bold bg-primary text-surface-container-lowest rounded-lg hover:bg-primary-container transition-colors shadow-sm">
                   Salvar
                 </button>
               </div>
@@ -407,7 +407,7 @@ export const Metas: React.FC = () => {
                 <button onClick={() => setIsDeleteModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-secondary hover:bg-surface-container-low rounded-lg transition-colors">
                   Cancelar
                 </button>
-                <button onClick={confirmDelete} className="px-5 py-2.5 text-sm font-bold bg-error text-white rounded-lg hover:bg-error/90 transition-colors shadow-sm">
+                <button onClick={confirmDelete} className="px-5 py-2.5 text-sm font-bold bg-error text-surface-container-lowest rounded-lg hover:bg-error/90 transition-colors shadow-sm">
                   Excluir Meta
                 </button>
               </div>

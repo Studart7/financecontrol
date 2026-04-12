@@ -76,7 +76,7 @@ export const Planilha: React.FC = () => {
           <h1 className="text-5xl font-extrabold text-primary tracking-tight font-headline">Planilha Financeira</h1>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+          <button className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
             <Icons.Download size={20} />
             Exportar CSV
           </button>
@@ -190,14 +190,11 @@ export const Planilha: React.FC = () => {
                 </th>
               </tr>
             </thead>
-            <AnimatePresence mode="wait" custom={slideDirection}>
               <motion.tbody
                 key={currentPage}
-                custom={slideDirection}
-                initial={(dir: string) => ({ x: dir === 'left' ? 50 : -50, opacity: 0 })}
-                animate={{ x: 0, opacity: 1 }}
-                exit={(dir: string) => ({ x: dir === 'left' ? -50 : 50, opacity: 0 })}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
                 className="divide-y divide-outline-variant/10"
               >
                 {isCreatingNew && (
@@ -349,7 +346,6 @@ export const Planilha: React.FC = () => {
                   </tr>
                 )}
               </motion.tbody>
-            </AnimatePresence>
           </table>
         </div>
 
@@ -363,47 +359,27 @@ export const Planilha: React.FC = () => {
             )}
 
             <div className="flex gap-3 overflow-hidden px-8 items-center flex-1 justify-center relative w-full h-full">
-              <AnimatePresence mode="popLayout" custom={slideDirection}>
                 {currentPage > 1 && (
-                  <motion.button
-                    key={`p-${currentPage - 1}`}
-                    custom={slideDirection}
-                    initial={(dir: string) => ({ x: dir === 'left' ? 30 : -30, opacity: 0 })}
-                    animate={{ x: 0, opacity: 0.5 }}
-                    exit={(dir: string) => ({ x: dir === 'left' ? -30 : 30, opacity: 0 })}
-                    transition={{ duration: 0.3 }}
+                  <button
                     onClick={() => changePage(currentPage - 1)}
                     className="px-2 py-1 bg-surface-variant text-secondary rounded text-xs font-bold"
                   >
                     {currentPage - 1}
-                  </motion.button>
+                  </button>
                 )}
-                <motion.button
-                  key={`c-${currentPage}`}
-                  custom={slideDirection}
-                  initial={(dir: string) => ({ x: dir === 'left' ? 30 : -30, opacity: 0 })}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={(dir: string) => ({ x: dir === 'left' ? -30 : 30, opacity: 0 })}
-                  transition={{ duration: 0.3 }}
-                  className="px-3 py-1 bg-primary text-white rounded text-xs font-bold shadow flex-shrink-0"
+                <button
+                  className="px-3 py-1 bg-primary text-surface-container-lowest rounded text-xs font-bold shadow flex-shrink-0"
                 >
                   {currentPage}
-                </motion.button>
+                </button>
                 {currentPage < maxPages && (
-                  <motion.button
-                    key={`n-${currentPage + 1}`}
-                    custom={slideDirection}
-                    initial={(dir: string) => ({ x: dir === 'left' ? 30 : -30, opacity: 0 })}
-                    animate={{ x: 0, opacity: 0.5 }}
-                    exit={(dir: string) => ({ x: dir === 'left' ? -30 : 30, opacity: 0 })}
-                    transition={{ duration: 0.3 }}
+                  <button
                     onClick={() => changePage(currentPage + 1)}
                     className="px-2 py-1 bg-surface-variant text-secondary rounded text-xs font-bold"
                   >
                     {currentPage + 1}
-                  </motion.button>
+                  </button>
                 )}
-              </AnimatePresence>
             </div>
 
             {currentPage < maxPages && (
