@@ -39,7 +39,10 @@ export const Navbar: React.FC<NavProps> = ({ activeTab, setActiveTab }) => {
           <button className="text-primary p-2 hover:bg-surface-container-low rounded-full transition-transform active:opacity-80 scale-95">
             <Icons.Language size={24} />
           </button>
-          <button className="text-primary p-2 hover:bg-surface-container-low rounded-full transition-transform active:opacity-80 scale-95">
+          <button 
+            onClick={() => document.documentElement.classList.toggle('dark')}
+            className="text-primary p-2 hover:bg-surface-container-low rounded-full transition-transform active:opacity-80 scale-95"
+          >
             <Icons.DarkMode size={24} />
           </button>
           <button className="text-primary p-2 hover:bg-surface-container-low rounded-full transition-transform active:opacity-80 scale-95">

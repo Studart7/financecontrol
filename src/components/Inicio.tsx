@@ -30,17 +30,13 @@ export const Inicio: React.FC<InicioProps> = ({ onOpenModal }) => {
             </div>
             <h2 className="font-headline text-2xl font-semibold mb-3 text-on-surface">Arraste e solte seus recibos</h2>
             <p className="text-secondary mb-8 max-w-md">Formatos aceitos: PDF, JPEG, PNG. Limite de 10MB por arquivo para garantir a precisão do processamento.</p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex justify-center w-full mt-2">
               <button 
                 onClick={onOpenModal}
                 className="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-4 rounded font-bold tracking-wide shadow-lg shadow-primary/10 hover:opacity-90 transition-all flex items-center gap-2"
               >
                 <Icons.Add size={20} />
                 Selecionar Arquivos
-              </button>
-              <button className="px-8 py-4 text-secondary font-semibold hover:bg-surface-container-low rounded transition-colors flex items-center gap-2">
-                <Icons.Planilha size={20} />
-                Acessar planilha existente
               </button>
             </div>
           </div>
