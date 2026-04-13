@@ -149,8 +149,8 @@ export const Metas: React.FC = () => {
             <h1 className="text-4xl md:text-5xl font-headline font-bold text-on-surface tracking-tight">Orçamento e Metas</h1>
             <p className="text-secondary mt-2 text-lg">Gerencie seu patrimônio com elegância e precisão.</p>
           </div>
-          <div className="flex flex-col gap-4 items-end">
-            <div className="bg-surface-container-low p-1 rounded-lg flex gap-1 self-start md:self-auto">
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="bg-surface-container-low p-1 rounded-lg flex gap-1">
               {['7d', '10d', '15d', '30d'].map((d) => (
                 <button 
                   key={d} 
@@ -163,7 +163,7 @@ export const Metas: React.FC = () => {
             </div>
             <button 
               onClick={openNewGoalModal}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] whitespace-nowrap"
             >
               <Icons.Add size={20} />
               Nova Meta
@@ -320,7 +320,7 @@ export const Metas: React.FC = () => {
                 src="https://picsum.photos/seed/journal/600/400"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-on-surface/90 to-transparent flex items-end p-6">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex items-end p-6">
                 <div>
                   <span className="text-[10px] font-body font-bold text-primary-container uppercase tracking-widest mb-1 block">Artigo Recomendado</span>
                   <h4 className="text-white font-headline font-bold text-lg leading-tight">A Arte de Acumular: Estratégias para o Próximo Trimestre</h4>

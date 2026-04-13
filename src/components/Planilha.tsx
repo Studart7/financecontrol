@@ -23,9 +23,10 @@ const formatDateFromInput = (dateStr: string) => {
 };
 
 export const Planilha: React.FC = () => {
-  const { transactions, goals, removeTransaction, updateTransaction } = useFinance();
+  const { transactions, goals, removeTransaction, updateTransaction, addTransaction } = useFinance();
   const [statusFilter, setStatusFilter] = useState('all'); // all, pago, pendente
   const [categoryFilter, setCategoryFilter] = useState('Todas as Categorias');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Transaction>>({});
   const [deletingRowId, setDeletingRowId] = useState<number | null>(null);
@@ -47,6 +48,7 @@ export const Planilha: React.FC = () => {
 
   const filteredData = transactions.filter(item => {
     if (categoryFilter !== 'Todas as Categorias' && item.cat !== categoryFilter) return false;
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (statusFilter === 'all') return true;
     if (statusFilter === 'pago') return item.status === 'Liquidado';
     if (statusFilter === 'pendente') return item.status === 'Pendente';
@@ -63,6 +65,46 @@ export const Planilha: React.FC = () => {
     setCurrentPage(newPage);
   };
 
+  const exportCSV = () => {
+    // Helper to escape CSV fields
+    const escapeCSV = (val: string) => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const headers = ['Data', 'Descrição', 'Categoria', 'Valor (R$)', 'Status'];
+    const rows = filteredData.map(row => [
+      escapeCSV(row.date),
+      escapeCSV(row.name),
+      escapeCSV(row.cat),
+      row.val.toFixed(2).replace('.', ','),
+      escapeCSV(row.status),
+    ]);
+
+    // Summary rows at the bottom
+    const totalFiltered = filteredData.reduce((acc, r) => acc + r.val, 0);
+    rows.push([]); // blank separator
+    rows.push(['', '', 'TOTAL', totalFiltered.toFixed(2).replace('.', ','), '']);
+    rows.push(['', '', `${filteredData.length} lançamentos`, '', '']);
+    rows.push([`Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, '', '', '', '']);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    
+    // BOM for proper UTF-8 encoding in Excel
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `FinanceControl_Planilha_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <motion.main
       initial={{ opacity: 0, y: 20 }}
@@ -76,7 +118,10 @@ export const Planilha: React.FC = () => {
           <h1 className="text-5xl font-extrabold text-primary tracking-tight font-headline">Planilha Financeira</h1>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+          <button 
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          >
             <Icons.Download size={20} />
             Exportar CSV
           </button>
@@ -159,7 +204,13 @@ export const Planilha: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 bg-surface-container-low rounded-lg px-3 py-1.5 border border-outline-variant/10">
             <Icons.Search className="text-secondary" size={18} />
-            <input className="bg-transparent border-none focus:ring-0 text-sm w-48 placeholder:text-secondary font-body" placeholder="Buscar lançamento..." type="text" />
+            <input 
+              className="bg-transparent border-none focus:ring-0 text-sm w-48 placeholder:text-secondary font-body outline-none" 
+              placeholder="Buscar lançamento..." 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            />
           </div>
         </div>
 
@@ -415,7 +466,7 @@ export const Planilha: React.FC = () => {
 
         <div className="md:col-span-2 relative overflow-hidden rounded-xl bg-surface-variant">
           <img
-            className="w-full h-full object-cover opacity-80 mix-blend-multiply transition-transform duration-700 hover:scale-105"
+            className="w-full h-full object-cover opacity-80 transition-transform duration-700 hover:scale-105"
             src="https://picsum.photos/seed/finance/1200/600"
             alt="Finance"
             referrerPolicy="no-referrer"

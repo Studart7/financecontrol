@@ -2,6 +2,8 @@ import React from 'react';
 import { Icons } from '../lib/icons';
 import { motion } from 'motion/react';
 import { useFinance } from '../context/FinanceContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const Dashboard: React.FC = () => {
   const { goals, transactions } = useFinance();
@@ -67,10 +69,148 @@ export const Dashboard: React.FC = () => {
      return {
         label: goal.title,
         val: `R$ ${goal.val.toLocaleString('pt-BR')} / R$ ${goal.meta.toLocaleString('pt-BR')}`,
+        gastoNum: goal.val,
+        metaNum: goal.meta,
         progress: `${Math.min(progPct, 100)}%`,
         meta: `${Math.min(metaPct, 100)}%`
      }
   });
+
+  const exportPDF = () => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let y = margin;
+
+    // --- Header band ---
+    doc.setFillColor(149, 67, 59); // #95433b primary
+    doc.rect(0, 0, pageWidth, 36, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('FinanceControl', margin, 16);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Relatório Financeiro Executivo', margin, 24);
+    const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    doc.text(`Gerado em ${today}`, pageWidth - margin, 24, { align: 'right' });
+    
+    y = 48;
+
+    // --- Executive Summary ---
+    doc.setTextColor(31, 28, 13); // on-surface
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Resumo Executivo', margin, y);
+    y += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+
+    const summaryData = [
+      ['Total Gasto no Período', `R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+      ['Meta Total', `R$ ${totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+      ['Progresso do Orçamento', `${Math.round(totalProgress)}%`],
+      ['Situação', totalGasto > totalMeta ? 'Acima do Orçamento' : 'Dentro do Orçamento'],
+      ['Média Diária', `R$ ${Math.round(totalGasto / 30).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+      ['Total de Transações', `${transactions.length}`],
+    ];
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Indicador', 'Valor']],
+      body: summaryData,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      headStyles: { fillColor: [149, 67, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+      bodyStyles: { fontSize: 9, textColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [250, 245, 235] },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 14;
+
+    // --- Distribution ---
+    doc.setTextColor(31, 28, 13);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Distribuição de Gastos por Categoria', margin, y);
+    y += 8;
+
+    const distData = distItems.filter(d => d.rawVal > 0).map(d => [
+      d.label,
+      d.val,
+      `R$ ${enrichedGoals.find(g => g.title === d.label)?.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`,
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Categoria', '% do Total', 'Valor (R$)']],
+      body: distData,
+      margin: { left: margin, right: margin },
+      theme: 'striped',
+      headStyles: { fillColor: [122, 83, 54], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+      bodyStyles: { fontSize: 9, textColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [250, 245, 235] },
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 14;
+
+    // --- Budget Comparison ---
+    doc.setTextColor(31, 28, 13);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Comparativo: Gasto vs Meta', margin, y);
+    y += 8;
+
+    const budgetData = gastoMetaItems.map(item => {
+      const diff = item.metaNum - item.gastoNum;
+      const status = diff >= 0 ? 'Dentro' : 'Acima';
+      return [
+        item.label,
+        `R$ ${item.gastoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        `R$ ${item.metaNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        `R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        status,
+      ];
+    });
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Categoria', 'Gasto', 'Meta', 'Diferença', 'Status']],
+      body: budgetData,
+      margin: { left: margin, right: margin },
+      theme: 'grid',
+      headStyles: { fillColor: [149, 67, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+      bodyStyles: { fontSize: 9, textColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [250, 245, 235] },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 4) {
+          if (data.cell.raw === 'Acima') {
+            data.cell.styles.textColor = [186, 26, 26];
+            data.cell.styles.fontStyle = 'bold';
+          } else {
+            data.cell.styles.textColor = [34, 120, 60];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      }
+    });
+
+    // --- Footer ---
+    const pageCount = doc.internal.pages.length - 1;
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`FinanceControl © ${new Date().getFullYear()} — Documento gerado automaticamente. Uso exclusivo para consulta pessoal.`, margin, doc.internal.pageSize.getHeight() - 10);
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
+    }
+
+    doc.save(`FinanceControl_Relatorio_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <motion.main 
@@ -84,7 +224,10 @@ export const Dashboard: React.FC = () => {
           <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mt-1">Resumo Financeiro</h1>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+          <button 
+            onClick={exportPDF}
+            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          >
             <Icons.Download size={20} />
             Exportar PDF
           </button>
@@ -145,7 +288,7 @@ export const Dashboard: React.FC = () => {
           <div className="w-48 h-48 relative flex items-center justify-center">
             <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 32 32">
               {svgCircles}
-              <circle cx="16" cy="16" fill="white" r="8"></circle>
+              <circle cx="16" cy="16" className="fill-surface-container-lowest" r="8"></circle>
             </svg>
             <div className="flex flex-col items-center relative z-10">
               <span className="font-headline text-2xl font-bold text-on-surface">{distItems.filter(i => i.rawVal > 0).length}</span>
