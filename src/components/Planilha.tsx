@@ -466,7 +466,7 @@ export const Planilha: React.FC = () => {
 
         <div className="md:col-span-2 relative overflow-hidden rounded-xl bg-surface-variant">
           <img
-            className="w-full h-full object-cover opacity-80 mix-blend-multiply transition-transform duration-700 hover:scale-105"
+            className="w-full h-full object-cover opacity-80 transition-transform duration-700 hover:scale-105"
             src="https://picsum.photos/seed/finance/1200/600"
             alt="Finance"
             referrerPolicy="no-referrer"

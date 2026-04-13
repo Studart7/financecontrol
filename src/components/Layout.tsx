@@ -11,6 +11,7 @@ interface NavProps {
 export const Navbar: React.FC<NavProps> = ({ activeTab, setActiveTab, onOpenProfile }) => {
   const [isDark, setIsDark] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Sync state with actual class on mount
   useEffect(() => {
@@ -75,10 +76,12 @@ export const Navbar: React.FC<NavProps> = ({ activeTab, setActiveTab, onOpenProf
         <div className="flex items-center gap-2 md:gap-4">
           <button 
             onClick={toggleTheme}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             className="text-primary p-2 hover:bg-surface-container-low rounded-full transition-transform active:opacity-80 relative w-10 h-10 flex items-center justify-center overflow-hidden"
           >
             <AnimatePresence mode="wait" initial={false}>
-              {isDark ? (
+              {(isDark && !isHovered) || (!isDark && isHovered) ? (
                 <motion.div
                   key="moon"
                   initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
