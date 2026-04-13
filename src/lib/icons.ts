@@ -31,7 +31,15 @@ import {
   Smartphone,
   Shield,
   Lock,
-  Cloud
+  Cloud,
+  Settings,
+  Bell,
+  HelpCircle,
+  LogOut,
+  Mail,
+  Star,
+  Sun,
+  Menu
 } from 'lucide-react';
 
 export const Icons = {
@@ -67,5 +75,13 @@ export const Icons = {
   Mobile: Smartphone,
   Security: Shield,
   Privacy: Lock,
-  Cloud: Cloud
+  Cloud: Cloud,
+  Settings: Settings,
+  Notifications: Bell,
+  Help: HelpCircle,
+  Logout: LogOut,
+  Mail: Mail,
+  Star: Star,
+  Sun: Sun,
+  Menu: Menu
 };
