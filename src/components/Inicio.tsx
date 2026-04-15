@@ -136,7 +136,7 @@ export const Inicio: React.FC<InicioProps> = ({ onSendForAnalysis, confirmedFile
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`bg-surface-container-lowest rounded-xl border-2 border-dashed transition-all shadow-sm min-h-[450px] flex flex-col ${
+            className={`bg-surface-container-lowest rounded-xl border-2 border-dashed transition-all shadow-sm h-full flex flex-col ${
               isDragging 
                 ? 'border-primary bg-primary/5 scale-[1.01]' 
                 : hasFiles 
