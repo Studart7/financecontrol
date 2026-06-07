@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { isCurrentMonth } from '../utils/date';
 
 export interface Transaction {
   id: number;
@@ -37,6 +38,7 @@ export interface AIRecommendation {
 
 interface FinanceContextData {
   transactions: Transaction[];
+  currentMonthTransactions: Transaction[];
   goals: Goal[];
   aiInsights: AIInsight[];
   aiRecommendations: AIRecommendation[];
@@ -210,9 +212,11 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
     setAcceptedRecommendations(prev => [...prev, id]);
   };
 
+  const currentMonthTransactions = transactions.filter(t => isCurrentMonth(t.date));
+
   return (
     <FinanceContext.Provider value={{
-      transactions, goals, aiInsights, aiRecommendations, isLoadingInsights,
+      transactions, currentMonthTransactions, goals, aiInsights, aiRecommendations, isLoadingInsights,
       addGoal, updateGoal, deleteGoal,
       addTransaction, updateTransaction, removeTransaction,
       acceptedRecommendations, acceptRecommendation, refreshInsights

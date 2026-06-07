@@ -2,6 +2,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import { Icons } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinance, Transaction } from '../context/FinanceContext';
+import { RevisionModal } from './RevisionModal';
 
 export interface UploadedFile {
   id: string;
@@ -35,7 +36,8 @@ export const Inicio: React.FC = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addTransaction, transactions } = useFinance();
+  const { addTransaction, currentMonthTransactions } = useFinance();
+  const [pendingQueue, setPendingQueue] = useState<Array<{data: any, fileId: string}>>([]);
 
   const processFiles = useCallback((fileList: FileList | null) => {
     if (!fileList) return;
@@ -93,32 +95,58 @@ export const Inicio: React.FC = () => {
           }
         }
 
-        const tx: Transaction = {
-          id: Date.now(), // This will be overwritten by backend's auto-increment
-          date: txDate,
-          name: est,
-          cat: cat,
-          val: val,
-          status: 'Liquidado',
-          iconKey: cat === 'Alimentação' ? 'Alimentacao' : cat === 'Transporte' ? 'Transporte' : cat === 'Saúde' ? 'History' : cat === 'Moradia' ? 'Inicio' : 'Outros'
-        };
-
-        addTransaction(tx);
-
-        setFiles(prev => prev.map(f => 
-          f.id === fileId ? { 
-            ...f, 
-            status: 'done',
-            extractedData: { establishment: est, val: val, category: cat, date: txDate }
-          } : f
-        ));
+        setPendingQueue(prev => {
+          return [...prev, { 
+            data: {
+              date: txDate,
+              name: est,
+              cat: cat,
+              val: val
+            }, 
+            fileId 
+          }];
+        });
       } catch (error) {
         console.error('Error processing file:', error);
         setFiles(prev => prev.filter(f => f.id !== fileId));
         alert('Erro ao processar o arquivo. Tente novamente.');
       }
     });
-  }, [addTransaction]);
+  }, []);
+
+  const handleSaveTransaction = (editedData: { date: string; name: string; cat: string; val: number }) => {
+    if (pendingQueue.length === 0) return;
+    const currentItem = pendingQueue[0];
+    
+    const tx: Transaction = {
+      id: Date.now(),
+      date: editedData.date,
+      name: editedData.name,
+      cat: editedData.cat,
+      val: editedData.val,
+      status: 'Liquidado',
+      iconKey: editedData.cat === 'Alimentação' ? 'Alimentacao' : editedData.cat === 'Transporte' ? 'Transporte' : editedData.cat === 'Saúde' ? 'History' : editedData.cat === 'Moradia' ? 'Inicio' : 'Outros'
+    };
+
+    addTransaction(tx);
+
+    setFiles(prev => prev.map(f => 
+      f.id === currentItem.fileId ? { 
+        ...f, 
+        status: 'done',
+        extractedData: { establishment: editedData.name, val: editedData.val, category: editedData.cat, date: editedData.date }
+      } : f
+    ));
+
+    setPendingQueue(prev => prev.slice(1));
+  };
+
+  const handleCancelTransaction = () => {
+    if (pendingQueue.length === 0) return;
+    const currentItem = pendingQueue[0];
+    setFiles(prev => prev.filter(f => f.id !== currentItem.fileId));
+    setPendingQueue(prev => prev.slice(1));
+  };
 
   const handleSelectFiles = () => fileInputRef.current?.click();
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +161,7 @@ export const Inicio: React.FC = () => {
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
 
-  const currentMonthTotal = transactions.reduce((acc, curr) => acc + curr.val, 0);
+  const currentMonthTotal = currentMonthTransactions.reduce((acc, curr) => acc + curr.val, 0);
 
   return (
     <motion.main 
@@ -275,6 +303,15 @@ export const Inicio: React.FC = () => {
           </div>
         </div>
       </div>
+      <RevisionModal
+        isOpen={pendingQueue.length > 0}
+        onClose={handleCancelTransaction}
+        onSave={handleSaveTransaction}
+        initialData={pendingQueue.length > 0 ? {
+          ...pendingQueue[0].data,
+          preview: files.find(f => f.id === pendingQueue[0].fileId)?.preview || null
+        } : null}
+      />
     </motion.main>
   );
 };

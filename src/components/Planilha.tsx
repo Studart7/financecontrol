@@ -50,7 +50,7 @@ export const Planilha: React.FC = () => {
     return { ...goal, val };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
 

@@ -5,7 +5,7 @@ import { useFinance } from '../context/FinanceContext';
 
 export const Metas: React.FC = () => {
   const { 
-    goals, transactions, addGoal, updateGoal, deleteGoal, 
+    goals, currentMonthTransactions: transactions, addGoal, updateGoal, deleteGoal, 
     acceptedRecommendations, acceptRecommendation,
     aiRecommendations, isLoadingInsights
   } = useFinance();
@@ -43,7 +43,7 @@ export const Metas: React.FC = () => {
     };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
   const isOverBudget = totalGasto > totalMeta;

@@ -6,39 +6,55 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export const Dashboard: React.FC = () => {
-  const { goals, transactions, aiInsights, isLoadingInsights } = useFinance();
+  const { goals, currentMonthTransactions: transactions, aiInsights, isLoadingInsights } = useFinance();
 
-  // Ensuring we compute totalGasto consistently from goals as `Metas.tsx` does
   const enrichedGoals = goals.map(goal => {
     const categoryTransactions = transactions.filter(t => t.cat.toLowerCase() === goal.title.toLowerCase());
     const val = categoryTransactions.reduce((acc, curr) => acc + curr.val, 0);
     return { ...goal, val };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
   
   // Configuração da Distribuição de Gastos com SVG dinamico
-  const distItems = enrichedGoals.map(g => {
-     const pt = totalGasto > 0 ? (g.val / totalGasto) * 100 : 0;
-     // SVG colors mapping based on tailwind classes just for visuals if needed, 
-     // but we can map hex colors so the SVG circles can render properly natively:
-     let hexColor = '#95433b'; // default error/primaryish
-     if (g.color.includes('primary')) hexColor = '#7a5336';
-     if (g.color.includes('tertiary')) hexColor = '#d7c3b6';
-     if (g.color.includes('secondary')) hexColor = '#6e5a56';
-     if (g.color.includes('outline')) hexColor = '#eae2cb';
-     if (g.color.includes('error')) hexColor = '#c44536';
+  const categoryTotals: Record<string, { val: number, catName: string }> = {};
+  
+  transactions.forEach(t => {
+    const lowerCat = t.cat.toLowerCase();
+    if (!categoryTotals[lowerCat]) {
+      categoryTotals[lowerCat] = { val: 0, catName: t.cat };
+    }
+    categoryTotals[lowerCat].val += t.val;
+  });
+
+  const distItems = Object.values(categoryTotals).map(catData => {
+     const pt = totalGasto > 0 ? (catData.val / totalGasto) * 100 : 0;
      
+     // Find if there's a goal for this category to borrow its color
+     const matchedGoal = goals.find(g => g.title.toLowerCase() === catData.catName.toLowerCase());
+     const colorClass = matchedGoal ? matchedGoal.color : 'bg-surface-variant';
+     
+     let hexColor = '#a8a8a8'; // default surface-variantish
+     if (colorClass.includes('primary')) hexColor = '#7a5336';
+     else if (colorClass.includes('tertiary')) hexColor = '#d7c3b6';
+     else if (colorClass.includes('secondary')) hexColor = '#6e5a56';
+     else if (colorClass.includes('outline')) hexColor = '#eae2cb';
+     else if (colorClass.includes('error')) hexColor = '#c44536';
+     else if (matchedGoal) hexColor = '#95433b';
+
      return {
-        label: g.title,
+        label: catData.catName,
         val: `${Math.round(pt)}%`,
         rawVal: pt,
-        color: g.color || 'bg-surface-variant',
+        rawTotalVal: catData.val,
+        color: colorClass,
         hexColor
      };
-  }).sort((a,b) => b.rawVal - a.rawVal);
+  });
+
+  distItems.sort((a,b) => b.rawVal - a.rawVal);
 
   let accumulatedOffset = 0;
   const svgCircles = distItems.filter(item => item.rawVal > 0).map((item, index) => {
@@ -113,7 +129,7 @@ export const Dashboard: React.FC = () => {
       ['Meta Total', `R$ ${totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
       ['Progresso do Orçamento', `${Math.round(totalProgress)}%`],
       ['Situação', totalGasto > totalMeta ? 'Acima do Orçamento' : 'Dentro do Orçamento'],
-      ['Média Diária', `R$ ${Math.round(totalGasto / 30).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+      ['Média Diária', `R$ ${Math.round(totalGasto / Math.max(1, new Date().getDate())).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
       ['Total de Transações', `${transactions.length}`],
     ];
 
@@ -141,7 +157,7 @@ export const Dashboard: React.FC = () => {
     const distData = distItems.filter(d => d.rawVal > 0).map(d => [
       d.label,
       d.val,
-      `R$ ${enrichedGoals.find(g => g.title === d.label)?.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`,
+      `R$ ${d.rawTotalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
     ]);
 
     autoTable(doc, {
@@ -358,7 +374,7 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {(() => {
-          const mediaDiaria = transactions.length > 0 ? Math.round(totalGasto / 30) : 0;
+          const mediaDiaria = transactions.length > 0 ? Math.round(totalGasto / Math.max(1, new Date().getDate())) : 0;
           const maiorGasto = transactions.length > 0 ? Math.max(...transactions.map(t => t.val)) : 0;
           const economiaProjetada = totalMeta > totalGasto ? Math.round(totalMeta - totalGasto) : 0;
           return [
