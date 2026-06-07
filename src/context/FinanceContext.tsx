@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 export interface Transaction {
   id: number;
@@ -22,69 +22,200 @@ export interface Goal {
   tip: string;
 }
 
+export interface AIInsight {
+  title: string;
+  description: string;
+  type: 'warning' | 'opportunity' | 'info';
+}
+
+export interface AIRecommendation {
+  title: string;
+  description: string;
+  suggestedValue: number;
+  priority: 'high' | 'medium';
+}
+
 interface FinanceContextData {
   transactions: Transaction[];
   goals: Goal[];
-  addGoal: (goal: Goal) => void;
+  aiInsights: AIInsight[];
+  aiRecommendations: AIRecommendation[];
+  isLoadingInsights: boolean;
+  addGoal: (goal: Omit<Goal, 'id'>) => void;
   updateGoal: (id: number, data: Partial<Goal>) => void;
   deleteGoal: (id: number) => void;
   addTransaction: (tx: Transaction) => void;
   updateTransaction: (id: number, data: Partial<Transaction>) => void;
   removeTransaction: (id: number) => void;
   acceptedRecommendations: string[];
-  acceptRecommendation: (id: string, goalUpdate?: () => void) => void;
+  acceptRecommendation: (id: string, goalData?: Omit<Goal, 'id'>) => void;
+  refreshInsights: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextData>({} as FinanceContextData);
 
 export const useFinance = () => useContext(FinanceContext);
 
+const API_URL = 'http://localhost:3001/api';
+
 export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: 1, date: '24 Out 2024', name: 'Aluguel Apto', cat: 'Moradia', val: 2800, status: 'Liquidado', iconKey: 'Inicio' },
-    { id: 2, date: '24 Out 2024', name: 'Pão de Açúcar', cat: 'Alimentação', val: 600, status: 'Liquidado', iconKey: 'ShoppingBag' },
-    { id: 3, date: '22 Out 2024', name: 'Outback', cat: 'Alimentação', val: 350, status: 'Liquidado', iconKey: 'Alimentacao' },
-    { id: 4, date: '21 Out 2024', name: 'Posto Ipiranga', cat: 'Transporte', val: 150, status: 'Liquidado', iconKey: 'Transporte' },
-    { id: 5, date: '20 Out 2024', name: 'Uber Viagens', cat: 'Transporte', val: 300, status: 'Pendente', iconKey: 'Transporte' },
-    { id: 6, date: '19 Out 2024', name: 'SmartFit', cat: 'Saúde', val: 120, status: 'Liquidado', iconKey: 'History' },
-    { id: 7, date: '18 Out 2024', name: 'Farmácia', cat: 'Saúde', val: 80, status: 'Liquidado', iconKey: 'History' },
-    { id: 8, date: '15 Out 2024', name: 'Ingresso.com', cat: 'Lazer', val: 100, status: 'Liquidado', iconKey: 'Outros' },
-    { id: 9, date: '12 Out 2024', name: 'Ifood', cat: 'Alimentação', val: 250, status: 'Liquidado', iconKey: 'Alimentacao' },
-    { id: 10, date: '10 Out 2024', name: 'Starbucks', cat: 'Alimentação', val: 100, status: 'Liquidado', iconKey: 'Alimentacao' },
-    { id: 11, date: '05 Out 2024', name: 'Ticketmaster (Show)', cat: 'Lazer', val: 250, status: 'Liquidado', iconKey: 'Outros' }
-  ]);
-
-  const [goals, setGoals] = useState<Goal[]>([
-    { id: 1, title: 'Alimentação', meta: 1200, color: 'bg-error', iconKey: 'Alimentacao', iconColor: 'text-secondary', iconBg: 'bg-surface-container-low', tipIconKey: 'Lightbulb', tip: '"Você poderia economizar R$ 45 este mês reduzindo pedidos de delivery nos finais de semana."' },
-    { id: 2, title: 'Transporte', meta: 500, color: 'bg-tertiary', iconKey: 'Transporte', iconColor: 'text-tertiary', iconBg: 'bg-tertiary/10', tipIconKey: 'Lightbulb', tip: '"Seu gasto com transporte está 10% abaixo da meta. Excelente controle!"' },
-    { id: 3, title: 'Moradia', meta: 3000, color: 'bg-primary-container', iconKey: 'Inicio', iconColor: 'text-primary', iconBg: 'bg-primary/10', tipIconKey: 'TrendingDown', tip: '"Contas de energia subiram 12% este mês. Considere revisar o uso de aparelhos de alto consumo."' },
-    { id: 4, title: 'Saúde', meta: 400, color: 'bg-outline-variant', iconKey: 'History', iconColor: 'text-secondary', iconBg: 'bg-surface-container-low', tipIconKey: 'Verified', tip: '"Gastos com saúde estabilizados. Bom momento para focar no fundo de emergência."' },
-    { id: 5, title: 'Lazer', meta: 600, color: 'bg-secondary', iconKey: 'Outros', iconColor: 'text-secondary', iconBg: 'bg-surface-container-low', tipIconKey: 'Lightbulb', tip: '"Aproveite experiências gratuitas na sua cidade para manter o orçamento equilibrado."' },
-  ]);
-
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [acceptedRecommendations, setAcceptedRecommendations] = useState<string[]>([]);
 
-  const addGoal = (goal: Goal) => setGoals([goal, ...goals]);
-  const updateGoal = (id: number, data: Partial<Goal>) => {
-    setGoals(goals.map(g => g.id === id ? { ...g, ...data } : g));
-  };
-  const deleteGoal = (id: number) => setGoals(goals.filter(g => g.id !== id));
-  
-  const addTransaction = (tx: Transaction) => setTransactions([tx, ...transactions]);
-  const updateTransaction = (id: number, data: Partial<Transaction>) => {
-    setTransactions(transactions.map(t => t.id === id ? { ...t, ...data } : t));
-  };
-  const removeTransaction = (id: number) => setTransactions(transactions.filter(t => t.id !== id));
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/transactions`);
+      if (res.ok) {
+        const data = await res.json();
+        setTransactions(data);
+        return data;
+      }
+    } catch (e) {
+      console.error("Failed to fetch transactions:", e);
+    }
+    return [];
+  }, []);
 
-  const acceptRecommendation = (id: string, goalUpdate?: () => void) => {
-    if (goalUpdate) goalUpdate();
-    setAcceptedRecommendations([...acceptedRecommendations, id]);
+  const fetchGoals = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/goals`);
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch goals:", e);
+    }
+  }, []);
+
+  const fetchInsights = useCallback(async (txList: Transaction[]) => {
+    setIsLoadingInsights(true);
+    try {
+      const res = await fetch(`${API_URL}/ai/insights`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions: txList.map(t => ({ date: t.date, name: t.name, cat: t.cat, val: t.val })) })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiInsights(data.insights || []);
+        setAiRecommendations(data.recommendations || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch AI insights:", e);
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  }, []);
+
+  const refreshInsights = useCallback(() => {
+    fetchInsights(transactions);
+  }, [transactions, fetchInsights]);
+
+  React.useEffect(() => {
+    const init = async () => {
+      const txData = await fetchTransactions();
+      await fetchGoals();
+      fetchInsights(txData);
+    };
+    init();
+  }, [fetchTransactions, fetchGoals, fetchInsights]);
+
+  const addGoal = async (goal: Omit<Goal, 'id'>) => {
+    try {
+      const res = await fetch(`${API_URL}/goals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(goal)
+      });
+      if (res.ok) {
+        const saved = await res.json();
+        setGoals(prev => [saved, ...prev]);
+      }
+    } catch (error) {
+      console.error("Error adding goal:", error);
+    }
+  };
+
+  const updateGoal = async (id: number, data: Partial<Goal>) => {
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, ...data } : g));
+    try {
+      await fetch(`${API_URL}/goals/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      console.error("Error updating goal:", error);
+    }
+  };
+
+  const deleteGoal = async (id: number) => {
+    setGoals(prev => prev.filter(g => g.id !== id));
+    try {
+      await fetch(`${API_URL}/goals/${id}`, { method: 'DELETE' });
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+    }
+  };
+
+  const addTransaction = async (tx: Transaction) => {
+    const tempId = Date.now();
+    setTransactions(prev => [{...tx, id: tempId}, ...prev]);
+    try {
+      const res = await fetch(`${API_URL}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tx)
+      });
+      if (res.ok) {
+        const savedTx = await res.json();
+        setTransactions(prev => prev.map(t => t.id === tempId ? savedTx : t));
+      }
+    } catch (error) {
+      console.error("Error adding tx:", error);
+    }
+  };
+
+  const updateTransaction = async (id: number, data: Partial<Transaction>) => {
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...data } : t));
+    try {
+      await fetch(`${API_URL}/transactions/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (error) {
+      console.error("Error updating tx:", error);
+    }
+  };
+
+  const removeTransaction = async (id: number) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    try {
+      await fetch(`${API_URL}/transactions/${id}`, { method: 'DELETE' });
+    } catch (error) {
+      console.error("Error deleting tx:", error);
+    }
+  };
+
+  const acceptRecommendation = async (id: string, goalData?: Omit<Goal, 'id'>) => {
+    if (goalData) {
+      await addGoal(goalData);
+    }
+    setAcceptedRecommendations(prev => [...prev, id]);
   };
 
   return (
     <FinanceContext.Provider value={{
-      transactions, goals, addGoal, updateGoal, deleteGoal,
-      addTransaction, updateTransaction, removeTransaction, acceptedRecommendations, acceptRecommendation
+      transactions, goals, aiInsights, aiRecommendations, isLoadingInsights,
+      addGoal, updateGoal, deleteGoal,
+      addTransaction, updateTransaction, removeTransaction,
+      acceptedRecommendations, acceptRecommendation, refreshInsights
     }}>
       {children}
     </FinanceContext.Provider>
