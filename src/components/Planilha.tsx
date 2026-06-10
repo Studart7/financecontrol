@@ -2,15 +2,23 @@ import React, { useState } from 'react';
 import { Icons } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinance, Transaction } from '../context/FinanceContext';
+import { MonthSelector } from './MonthSelector';
 
 const parseDateForInput = (dateStr: string) => {
-  const months: Record<string, string> = { Jan: '01', Fev: '02', Mar: '03', Abr: '04', Mai: '05', Jun: '06', Jul: '07', Ago: '08', Set: '09', Out: '10', Nov: '11', Dez: '12' };
-  const parts = dateStr.split(' ');
-  if (parts.length === 3) {
+  if (!dateStr) return '';
+  const months: Record<string, string> = { jan: '01', fev: '02', mar: '03', abr: '04', mai: '05', jun: '06', jul: '07', ago: '08', set: '09', out: '10', nov: '11', dez: '12' };
+  
+  // Limpar a string (remover ' de ', pontos e colocar em lower case)
+  const cleanStr = dateStr.toLowerCase().replace(/ de /g, ' ').replace(/\./g, '').trim();
+  const parts = cleanStr.split(' ');
+  
+  if (parts.length >= 3) {
     const d = parts[0].padStart(2, '0');
-    const m = months[parts[1]] || '01';
-    const y = parts[2];
-    return `${y}-${m}-${d}`;
+    // Se por acaso tiver 4 partes (ex: "05", "jun", "de", "2026" - embora a regex deva limpar), garantimos pegar o mes e ano corretos.
+    const monthStr = parts.find(p => months[p]) || 'jan';
+    const y = parts[parts.length - 1];
+    
+    return `${y}-${months[monthStr]}-${d}`;
   }
   return dateStr;
 };
@@ -23,7 +31,7 @@ const formatDateFromInput = (dateStr: string) => {
 };
 
 export const Planilha: React.FC = () => {
-  const { transactions, goals, removeTransaction, updateTransaction, addTransaction } = useFinance();
+  const { currentMonthTransactions: transactions, goals, removeTransaction, updateTransaction, addTransaction } = useFinance();
   const [statusFilter, setStatusFilter] = useState('all'); // all, pago, pendente
   const [categoryFilter, setCategoryFilter] = useState('Todas as Categorias');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,16 +50,14 @@ export const Planilha: React.FC = () => {
     return { ...goal, val };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
 
   const filteredData = transactions.filter(item => {
     if (categoryFilter !== 'Todas as Categorias' && item.cat !== categoryFilter) return false;
     if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'pago') return item.status === 'Liquidado';
-    if (statusFilter === 'pendente') return item.status === 'Pendente';
+    if (statusFilter !== 'all' && (statusFilter === 'pago' ? item.status !== 'Liquidado' : item.status !== 'Pendente')) return false;
     return true;
   });
 
@@ -115,15 +121,16 @@ export const Planilha: React.FC = () => {
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <span className="font-body text-xs uppercase tracking-[0.2em] text-secondary mb-2 block">Gestão de Patrimônio</span>
-          <h1 className="text-5xl font-extrabold text-primary tracking-tight font-headline">Planilha Financeira</h1>
+          <h1 className="text-5xl font-extrabold text-primary tracking-tight font-headline">Extrato Completo</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <MonthSelector />
           <button 
             onClick={exportCSV}
             className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
           >
             <Icons.Download size={20} />
-            Exportar CSV
+            Baixar para o Excel
           </button>
         </div>
       </div>

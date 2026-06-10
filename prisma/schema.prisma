@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  date      String
+  name      String
+  cat       String
+  val       Float
+  status    String
+  iconKey   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Goal {
+  id        Int      @id @default(autoincrement())
+  title     String
+  meta      Float
+  color     String   @default("bg-tertiary")
+  iconKey   String   @default("Metas")
+  iconColor String   @default("text-tertiary")
+  iconBg    String   @default("bg-tertiary/10")
+  tipIconKey String  @default("Lightbulb")
+  tip       String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

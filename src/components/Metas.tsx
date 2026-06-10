@@ -2,33 +2,21 @@ import React, { useState } from 'react';
 import { Icons } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinance } from '../context/FinanceContext';
+import { MonthSelector } from './MonthSelector';
 
 export const Metas: React.FC = () => {
   const { 
-    goals, transactions, addGoal, updateGoal, deleteGoal, 
-    acceptedRecommendations, acceptRecommendation 
+    goals, currentMonthTransactions: transactions, addGoal, updateGoal, deleteGoal, 
+    acceptedRecommendations, acceptRecommendation,
+    aiRecommendations
   } = useFinance();
-  
-  const [period, setPeriod] = useState('30d');
-
   // States para os modais
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [goalFormData, setGoalFormData] = useState({ id: 0, title: '', meta: '' });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState<number | null>(null);
 
-  const getMultiplier = (p: string) => {
-    switch(p) {
-      case '7d': return 0.25;
-      case '10d': return 0.33;
-      case '15d': return 0.5;
-      case '30d': return 1;
-      default: return 1;
-    }
-  }
-  const mult = getMultiplier(period);
-
-  const formatCurrency = (val: number) => `R$ ${Math.round(val * mult)}`;
+  const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   // Derivações do Dashboard total e metas enriquecidas
   const enrichedGoals = goals.map(goal => {
@@ -56,7 +44,7 @@ export const Metas: React.FC = () => {
     };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
   const isOverBudget = totalGasto > totalMeta;
@@ -108,33 +96,17 @@ export const Metas: React.FC = () => {
     }
   };
 
-  const handleAcceptEmergencyFund = () => {
-    const newGoalVal = Math.round(200 * mult); // Just as a metric value, could be handled better but ok for MVP
-    addGoal({
-      id: Date.now(),
-      title: 'Fundo de Emergência',
-      meta: newGoalVal,
-      color: 'bg-primary',
-      iconKey: 'Verified',
-      iconColor: 'text-primary',
-      iconBg: 'bg-primary/10',
+  const handleAcceptAIRecommendation = (rec: any) => {
+    acceptRecommendation(rec.title, {
+      title: rec.title,
+      meta: rec.suggestedValue,
+      color: rec.priority === 'high' ? 'bg-primary' : 'bg-tertiary',
+      iconKey: 'Metas',
+      iconColor: rec.priority === 'high' ? 'text-primary' : 'text-tertiary',
+      iconBg: rec.priority === 'high' ? 'bg-primary/10' : 'bg-tertiary/10',
       tipIconKey: 'Verified',
       tip: '"Recomendação da IA aplicada. Meta criada com sucesso!"'
     });
-    acceptRecommendation('emergency');
-  };
-
-  const handleAcceptDinnerSavings = () => {
-    const foodGoal = goals.find(g => g.title.toLowerCase().includes('alimentação'));
-    if (foodGoal) {
-      acceptRecommendation('dinner', () => {
-        const newMeta = Math.max(0, foodGoal.meta - 100);
-        updateGoal(foodGoal.id, { 
-          meta: newMeta,
-          tip: '"Recomendação da IA aplicada: Você diminuiu R$ 100 da sua meta de jantares."' 
-        });
-      });
-    }
   };
 
   return (
@@ -150,17 +122,7 @@ export const Metas: React.FC = () => {
             <p className="text-secondary mt-2 text-lg">Gerencie seu patrimônio com elegância e precisão.</p>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="bg-surface-container-low p-1 rounded-lg flex gap-1">
-              {['7d', '10d', '15d', '30d'].map((d) => (
-                <button 
-                  key={d} 
-                  onClick={() => setPeriod(d)}
-                  className={`px-4 py-2 text-sm rounded transition-colors ${period === d ? 'font-bold bg-surface-container-lowest text-primary shadow-sm' : 'font-medium text-secondary hover:bg-surface-container-high'}`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
+            <MonthSelector />
             <button 
               onClick={openNewGoalModal}
               className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] whitespace-nowrap"
@@ -208,8 +170,8 @@ export const Metas: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 space-y-6">
+        <div className="grid grid-cols-1 gap-8">
+          <div className="space-y-6">
             {enrichedGoals.map((cat) => {
               const CatIcon = Icons[cat.iconKey as keyof typeof Icons] || Icons.Metas;
               const TipIcon = Icons[cat.tipIconKey as keyof typeof Icons] || Icons.Lightbulb;
@@ -252,81 +214,34 @@ export const Metas: React.FC = () => {
               );
             })}
 
-            {acceptedRecommendations.length < 2 && (
+            {aiRecommendations.length > 0 && (
               <section className="pt-8">
                 <div className="flex items-center gap-3 mb-6">
                   <Icons.Add className="text-primary" size={24} />
                   <h2 className="text-2xl font-headline font-bold text-on-surface">Recomendações da IA para suas Metas</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {!acceptedRecommendations.includes('emergency') && (
-                    <div className="bg-surface-container-lowest p-6 rounded-xl border border-primary/10 hover:shadow-md transition-shadow">
+                  {aiRecommendations.filter(rec => !acceptedRecommendations.includes(rec.title)).map((rec, i) => (
+                    <div key={i} className={`bg-surface-container-lowest p-6 rounded-xl border hover:shadow-md transition-shadow ${rec.priority === 'high' ? 'border-primary/20' : 'border-tertiary/20'}`}>
                       <div className="flex items-start justify-between mb-4">
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <div className={`p-2 rounded-lg ${rec.priority === 'high' ? 'bg-primary/10 text-primary' : 'bg-tertiary/10 text-tertiary'}`}>
                           <Icons.Metas size={24} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-secondary bg-surface-container-low px-2 py-1 rounded">Prioritário</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-secondary bg-surface-container-low px-2 py-1 rounded">
+                          {rec.priority === 'high' ? 'Prioritário' : 'Otimização'}
+                        </span>
                       </div>
-                      <h4 className="text-lg font-headline font-bold text-on-surface mb-2">Reforço do Fundo de Emergência</h4>
-                      <p className="text-sm text-secondary mb-6">Com base no seu saldo atual, sugerimos alocar R$ {Math.round(200 * mult)} extras este mês para atingir sua meta de segurança 2 meses antes.</p>
-                      <button onClick={handleAcceptEmergencyFund} className="w-full py-2.5 bg-primary text-surface-container-lowest font-bold text-sm rounded-lg hover:bg-primary-container transition-colors flex items-center justify-center gap-2">
+                      <h4 className="text-lg font-headline font-bold text-on-surface mb-2">{rec.title}</h4>
+                      <p className="text-sm text-secondary mb-6">{rec.description}</p>
+                      <button onClick={() => handleAcceptAIRecommendation(rec)} className={`w-full py-2.5 font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2 text-surface-container-lowest ${rec.priority === 'high' ? 'bg-primary hover:bg-primary-container' : 'bg-tertiary hover:bg-tertiary-container'}`}>
                         <Icons.Check size={18} />
-                        Aceitar Meta
+                        Aceitar Meta de R$ {rec.suggestedValue}
                       </button>
                     </div>
-                  )}
-
-                  {!acceptedRecommendations.includes('dinner') && (
-                    <div className="bg-surface-container-lowest p-6 rounded-xl border border-tertiary/10 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="p-2 rounded-lg bg-tertiary/10 text-tertiary">
-                          <Icons.Alimentacao size={24} />
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-secondary bg-surface-container-low px-2 py-1 rounded">Otimização</span>
-                      </div>
-                      <h4 className="text-lg font-headline font-bold text-on-surface mb-2">Economize R$ {Math.round(100 * mult)} em Jantares</h4>
-                      <p className="text-sm text-secondary mb-6">Seus gastos com restaurantes aumentaram. Reduzir um jantar fora por semana economizará R$ {Math.round(100 * mult)} para sua próxima viagem.</p>
-                      <button onClick={handleAcceptDinnerSavings} className="w-full py-2.5 bg-tertiary text-surface-container-lowest font-bold text-sm rounded-lg hover:bg-tertiary-container transition-colors flex items-center justify-center gap-2">
-                        <Icons.Check size={18} />
-                        Aceitar Meta
-                      </button>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </section>
             )}
-          </div>
-
-          <div className="lg:col-span-4 space-y-8">
-            <div className="bg-surface-dim p-8 rounded-xl text-center space-y-4">
-              <h3 className="font-headline font-bold text-on-surface opacity-80 uppercase tracking-widest text-sm">Health Score</h3>
-              <div className="relative inline-flex items-center justify-center">
-                <svg className="w-48 h-48 transform -rotate-90">
-                  <circle className="text-surface-container-low" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="8"></circle>
-                  <circle className="text-primary" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeDasharray="552.92" strokeDashoffset="88.46" strokeLinecap="round" strokeWidth="12"></circle>
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-6xl font-headline font-bold text-on-surface">84</span>
-                  <span className="text-sm font-body text-secondary font-medium uppercase">ESTÁVEL</span>
-                </div>
-              </div>
-              <p className="text-secondary text-sm px-4">Sua saúde financeira está acima da média de perfis similares. Continue diversificando!</p>
-            </div>
-
-            <div className="relative h-64 rounded-xl overflow-hidden shadow-xl group">
-              <img 
-                alt="Financial Journal" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                src="https://picsum.photos/seed/journal/600/400"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex items-end p-6">
-                <div>
-                  <span className="text-[10px] font-body font-bold text-primary-container uppercase tracking-widest mb-1 block">Artigo Recomendado</span>
-                  <h4 className="text-white font-headline font-bold text-lg leading-tight">A Arte de Acumular: Estratégias para o Próximo Trimestre</h4>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </motion.main>

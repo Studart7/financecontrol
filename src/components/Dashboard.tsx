@@ -2,43 +2,60 @@ import React from 'react';
 import { Icons } from '../lib/icons';
 import { motion } from 'motion/react';
 import { useFinance } from '../context/FinanceContext';
+import { MonthSelector } from './MonthSelector';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export const Dashboard: React.FC = () => {
-  const { goals, transactions } = useFinance();
+  const { goals, currentMonthTransactions: transactions, aiInsights, isLoadingInsights } = useFinance();
 
-  // Ensuring we compute totalGasto consistently from goals as `Metas.tsx` does
   const enrichedGoals = goals.map(goal => {
     const categoryTransactions = transactions.filter(t => t.cat.toLowerCase() === goal.title.toLowerCase());
     const val = categoryTransactions.reduce((acc, curr) => acc + curr.val, 0);
     return { ...goal, val };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
   
   // Configuração da Distribuição de Gastos com SVG dinamico
-  const distItems = enrichedGoals.map(g => {
-     const pt = totalGasto > 0 ? (g.val / totalGasto) * 100 : 0;
-     // SVG colors mapping based on tailwind classes just for visuals if needed, 
-     // but we can map hex colors so the SVG circles can render properly natively:
-     let hexColor = '#95433b'; // default error/primaryish
-     if (g.color.includes('primary')) hexColor = '#7a5336';
-     if (g.color.includes('tertiary')) hexColor = '#d7c3b6';
-     if (g.color.includes('secondary')) hexColor = '#6e5a56';
-     if (g.color.includes('outline')) hexColor = '#eae2cb';
-     if (g.color.includes('error')) hexColor = '#c44536';
+  const categoryTotals: Record<string, { val: number, catName: string }> = {};
+  
+  transactions.forEach(t => {
+    const lowerCat = t.cat.toLowerCase();
+    if (!categoryTotals[lowerCat]) {
+      categoryTotals[lowerCat] = { val: 0, catName: t.cat };
+    }
+    categoryTotals[lowerCat].val += t.val;
+  });
+
+  const distItems = Object.values(categoryTotals).map(catData => {
+     const pt = totalGasto > 0 ? (catData.val / totalGasto) * 100 : 0;
      
+     // Find if there's a goal for this category to borrow its color
+     const matchedGoal = goals.find(g => g.title.toLowerCase() === catData.catName.toLowerCase());
+     const colorClass = matchedGoal ? matchedGoal.color : 'bg-surface-variant';
+     
+     let hexColor = '#a8a8a8'; // default surface-variantish
+     if (colorClass.includes('primary')) hexColor = '#7a5336';
+     else if (colorClass.includes('tertiary')) hexColor = '#d7c3b6';
+     else if (colorClass.includes('secondary')) hexColor = '#6e5a56';
+     else if (colorClass.includes('outline')) hexColor = '#eae2cb';
+     else if (colorClass.includes('error')) hexColor = '#c44536';
+     else if (matchedGoal) hexColor = '#95433b';
+
      return {
-        label: g.title,
+        label: catData.catName,
         val: `${Math.round(pt)}%`,
         rawVal: pt,
-        color: g.color || 'bg-surface-variant',
+        rawTotalVal: catData.val,
+        color: colorClass,
         hexColor
      };
-  }).sort((a,b) => b.rawVal - a.rawVal);
+  });
+
+  distItems.sort((a,b) => b.rawVal - a.rawVal);
 
   let accumulatedOffset = 0;
   const svgCircles = distItems.filter(item => item.rawVal > 0).map((item, index) => {
@@ -91,7 +108,7 @@ export const Dashboard: React.FC = () => {
     doc.text('FinanceControl', margin, 16);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('Relatório Financeiro Executivo', margin, 24);
+    doc.text('Seu Relatório Financeiro', margin, 24);
     const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     doc.text(`Gerado em ${today}`, pageWidth - margin, 24, { align: 'right' });
     
@@ -101,7 +118,7 @@ export const Dashboard: React.FC = () => {
     doc.setTextColor(31, 28, 13); // on-surface
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Resumo Executivo', margin, y);
+    doc.text('Seu Resumo', margin, y);
     y += 10;
 
     doc.setFont('helvetica', 'normal');
@@ -113,7 +130,7 @@ export const Dashboard: React.FC = () => {
       ['Meta Total', `R$ ${totalMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
       ['Progresso do Orçamento', `${Math.round(totalProgress)}%`],
       ['Situação', totalGasto > totalMeta ? 'Acima do Orçamento' : 'Dentro do Orçamento'],
-      ['Média Diária', `R$ ${Math.round(totalGasto / 30).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+      ['Média Diária', `R$ ${Math.round(totalGasto / Math.max(1, new Date().getDate())).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
       ['Total de Transações', `${transactions.length}`],
     ];
 
@@ -141,7 +158,7 @@ export const Dashboard: React.FC = () => {
     const distData = distItems.filter(d => d.rawVal > 0).map(d => [
       d.label,
       d.val,
-      `R$ ${enrichedGoals.find(g => g.title === d.label)?.val.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`,
+      `R$ ${d.rawTotalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
     ]);
 
     autoTable(doc, {
@@ -220,10 +237,11 @@ export const Dashboard: React.FC = () => {
     >
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <span className="font-body text-xs uppercase tracking-[0.2em] text-secondary opacity-70">Painel Executivo</span>
-          <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mt-1">Resumo Financeiro</h1>
+          <span className="font-body text-xs uppercase tracking-[0.2em] text-secondary opacity-70">Seu Dinheiro</span>
+          <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mt-1">Seu Resumo</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
+          <MonthSelector />
           <button 
             onClick={exportPDF}
             className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
@@ -262,23 +280,27 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="md:col-span-4 bg-surface-container-low p-8 rounded-xl space-y-6">
-          <h3 className="font-headline text-xl font-semibold text-on-surface">Insights do Mês</h3>
+          <h3 className="font-headline text-xl font-semibold text-on-surface">O que notamos este mês</h3>
           <div className="space-y-4">
-            {[
-              { title: 'Aumento em Refeições', desc: 'Gastos com alimentação fora de casa subiram 25% esta semana.', icon: Icons.Warning, color: 'text-error', border: 'border-error' },
-              { title: 'Oportunidade de Poupança', desc: 'Sua conta de energia está 15% menor que o previsto. Deseja investir o excedente?', icon: Icons.TrendingDown, color: 'text-tertiary', border: 'border-tertiary' },
-              { title: 'Gasto Lazer Aumentando', desc: 'Cuidado extra com as atividades culturais e shows esse mês.', icon: Icons.Outros || Icons.Warning, color: 'text-primary', border: 'border-primary' },
-            ].map((insight, i) => {
-              const InsightIcon = insight.icon;
-              return (
-              <div key={i} className={`flex gap-4 p-4 bg-surface-container-lowest rounded-lg border-l-4 ${insight.border} shadow-sm`}>
-                <InsightIcon className={insight.color} size={20} />
-                <div>
-                  <p className="font-body text-sm font-bold text-on-surface">{insight.title}</p>
-                  <p className="text-xs text-secondary mt-1">{insight.desc}</p>
-                </div>
-              </div>
-            )})}
+            {aiInsights.length > 0 ? (
+              aiInsights.map((insight, i) => {
+                const iconMap: Record<string, any> = { warning: Icons.Warning, opportunity: Icons.TrendingDown, info: Icons.Outros || Icons.Warning };
+                const colorMap: Record<string, string> = { warning: 'text-error', opportunity: 'text-tertiary', info: 'text-primary' };
+                const borderMap: Record<string, string> = { warning: 'border-error', opportunity: 'border-tertiary', info: 'border-primary' };
+                const InsightIcon = iconMap[insight.type] || Icons.Warning;
+                return (
+                  <div key={i} className={`flex gap-4 p-4 bg-surface-container-lowest rounded-lg border-l-4 ${borderMap[insight.type] || 'border-primary'} shadow-sm`}>
+                    <InsightIcon className={colorMap[insight.type] || 'text-primary'} size={20} />
+                    <div>
+                      <p className="font-body text-sm font-bold text-on-surface">{insight.title}</p>
+                      <p className="text-xs text-secondary mt-1">{insight.description}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-secondary italic">Adicione transações para receber insights da IA.</p>
+            )}
           </div>
         </div>
       </div>
@@ -343,12 +365,17 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Média Diária', val: `R$ ${Math.round(totalGasto / 30)}`, icon: Icons.Inicio, border: 'border-b-2 border-primary' },
-          { label: 'Maior Gasto (Dia)', val: 'R$ 600,00', icon: Icons.ShoppingBag, border: 'border-b-2 border-primary' },
-          { label: 'Freq. Transações', val: `${transactions.length} no mês`, icon: Icons.History, border: 'border-b-2 border-primary' },
-          { label: 'Economia Projetada', val: 'R$ 320,00', icon: Icons.Metas, color: 'text-tertiary', border: 'border-b-2 border-primary' },
-        ].map((card, i) => (
+        {(() => {
+          const mediaDiaria = transactions.length > 0 ? Math.round(totalGasto / Math.max(1, new Date().getDate())) : 0;
+          const maiorGasto = transactions.length > 0 ? Math.max(...transactions.map(t => t.val)) : 0;
+          const economiaProjetada = totalMeta > totalGasto ? Math.round(totalMeta - totalGasto) : 0;
+          return [
+            { label: 'Média Diária', val: `R$ ${mediaDiaria.toLocaleString('pt-BR')}`, icon: Icons.Inicio, border: 'border-b-2 border-primary' },
+            { label: 'Maior Gasto (Dia)', val: `R$ ${maiorGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: Icons.ShoppingBag, border: 'border-b-2 border-primary' },
+            { label: 'Freq. Transações', val: `${transactions.length} no mês`, icon: Icons.History, border: 'border-b-2 border-primary' },
+            { label: 'Economia Projetada', val: `R$ ${economiaProjetada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: Icons.Metas, color: 'text-tertiary', border: 'border-b-2 border-primary' },
+          ];
+        })().map((card, i) => (
           <div key={i} className={`bg-surface-container-low p-6 rounded-lg flex flex-col gap-2 ${card.border || ''}`}>
             <card.icon className={card.color || 'text-secondary'} size={20} />
             <span className="font-body text-xs font-bold text-secondary uppercase opacity-70">{card.label}</span>

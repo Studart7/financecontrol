@@ -25,9 +25,9 @@ export const Navbar: React.FC<NavProps> = ({ activeTab, setActiveTab, onOpenProf
 
   const tabs = [
     { id: 'inicio', label: 'Início' },
-    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'dashboard', label: 'Seu Resumo' },
     { id: 'metas', label: 'Metas' },
-    { id: 'planilha', label: 'Planilha' },
+    { id: 'planilha', label: 'Extrato Completo' },
   ];
 
   const handleTabClick = (tabId: string) => {
