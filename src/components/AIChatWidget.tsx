@@ -2,11 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Icons } from '../lib/icons';
 import { useFinance } from '../context/FinanceContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { getAllCategories } from '../utils/categories';
 
 const API_URL = 'http://localhost:3001/api';
 
 export const AIChatWidget: React.FC = () => {
-  const { goals, addTransaction } = useFinance();
+  const { goals, transactions, addTransaction } = useFinance();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +38,7 @@ export const AIChatWidget: React.FC = () => {
     setSuccessMessage('');
 
     try {
-      const categories = goals.map(g => g.title);
+      const categories = getAllCategories(transactions, goals);
       
       const res = await fetch(`${API_URL}/gemini/chat`, {
         method: 'POST',
@@ -59,7 +60,7 @@ export const AIChatWidget: React.FC = () => {
             id: Date.now() + Math.floor(Math.random() * 1000), // temp id
             date: tx.date || new Date().toISOString().split('T')[0],
             name: tx.name,
-            cat: matchedGoal ? matchedGoal.title : 'Geral',
+            cat: tx.cat || 'Geral',
             val: tx.val,
             status: 'Liquidado' as const,
             iconKey: matchedGoal ? matchedGoal.iconKey : 'Outros'

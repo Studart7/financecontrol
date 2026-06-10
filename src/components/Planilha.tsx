@@ -3,6 +3,7 @@ import { Icons } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinance, Transaction } from '../context/FinanceContext';
 import { MonthSelector } from './MonthSelector';
+import { getAllCategories } from '../utils/categories';
 
 const parseDateForInput = (dateStr: string) => {
   if (!dateStr) return '';
@@ -111,6 +112,8 @@ export const Planilha: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const allCategories = getAllCategories(transactions, goals);
+
   return (
     <motion.main
       initial={{ opacity: 0, y: 20 }}
@@ -187,7 +190,7 @@ export const Planilha: React.FC = () => {
               className="bg-surface-container-low px-4 py-2 border-b-2 border-outline-variant text-sm font-medium focus:border-primary outline-none rounded-t"
             >
               <option value="Todas as Categorias">Todas as Categorias</option>
-              {goals.map(g => <option key={g.id} value={g.title}>{g.title}</option>)}
+              {allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
             <div className="flex gap-2">
               <button
@@ -264,9 +267,7 @@ export const Planilha: React.FC = () => {
                       <input type="text" className="bg-surface px-2 py-1 rounded border border-outline-variant font-semibold text-on-surface w-full outline-none focus:border-primary" value={editDraft.name || ''} onChange={e => setEditDraft({ ...editDraft, name: e.target.value })} />
                     </td>
                     <td className="px-6 py-5">
-                      <select className="bg-surface px-2 py-1 rounded border border-outline-variant text-[10px] font-bold uppercase outline-none focus:border-primary" value={editDraft.cat || goals[0]?.title} onChange={e => setEditDraft({ ...editDraft, cat: e.target.value })}>
-                        {goals.map(g => <option key={g.id} value={g.title}>{g.title}</option>)}
-                      </select>
+                      <input list="category-options" className="bg-surface px-2 py-1 rounded border border-outline-variant text-[10px] font-bold uppercase outline-none focus:border-primary w-full" value={editDraft.cat || ''} onChange={e => setEditDraft({ ...editDraft, cat: e.target.value })} placeholder="Categoria" />
                     </td>
                     <td className="px-6 py-5 font-headline font-bold text-on-surface">
                       <div className="flex items-center gap-1">
@@ -307,13 +308,13 @@ export const Planilha: React.FC = () => {
                             />
                           </td>
                           <td className="px-6 py-5">
-                            <select
-                              className="bg-surface px-2 py-1 rounded border border-outline-variant text-[10px] font-bold uppercase outline-none focus:border-primary"
+                            <input
+                              list="category-options"
+                              className="bg-surface px-2 py-1 rounded border border-outline-variant text-[10px] font-bold uppercase outline-none focus:border-primary w-full"
                               value={editDraft.cat ?? row.cat}
                               onChange={e => setEditDraft({ ...editDraft, cat: e.target.value })}
-                            >
-                              {goals.map(g => <option key={g.id} value={g.title}>{g.title}</option>)}
-                            </select>
+                              placeholder="Categoria"
+                            />
                           </td>
                           <td className="px-6 py-5 font-headline font-bold text-on-surface">
                             <div className="flex items-center gap-1">
@@ -523,6 +524,10 @@ export const Planilha: React.FC = () => {
           </div>
         </div>
       )}
+      
+      <datalist id="category-options">
+        {allCategories.map(cat => <option key={cat} value={cat} />)}
+      </datalist>
     </motion.main>
   );
 };

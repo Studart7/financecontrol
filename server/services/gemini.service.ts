@@ -85,7 +85,7 @@ Regras:
 1. Extraia CADA gasto mencionado como um objeto separado na lista.
 2. "name": O nome/estabelecimento (ex: "Ifood", "Farmácia", "Uber").
 3. "val": O valor numérico do gasto (ex: 240.00). Se não for especificado, tente deduzir ou coloque 0.
-4. "cat": A categoria mais apropriada. Você DEVE escolher EXATAMENTE UMA das seguintes opções disponíveis nas metas do usuário: [${allowedCategories.join(', ')}]. Se nenhuma se encaixar perfeitamente, escolha a mais genérica ou retorne "Geral".
+4. "cat": A categoria mais apropriada. Você DEVE escolher preferencialmente uma das seguintes opções disponíveis: [${allowedCategories.join(', ')}]. Se nenhuma se encaixar e for realmente necessário, você pode inferir uma nova categoria curta.
 5. "date": A data da transação em formato YYYY-MM-DD. Se o usuário não disser a data (como "ontem", "dia 15"), assuma a data de hoje: ${today}.
 
 Devolva EXCLUSIVAMENTE um JSON com o seguinte formato exato:

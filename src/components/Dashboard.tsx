@@ -30,27 +30,26 @@ export const Dashboard: React.FC = () => {
     categoryTotals[lowerCat].val += t.val;
   });
 
-  const distItems = Object.values(categoryTotals).map(catData => {
+  const colorPalette = [
+    '#95433b', // primary
+    '#d7c3b6', // tertiary
+    '#6e5a56', // secondary
+    '#c44536', // error-like
+    '#b69c8a', // brownish
+    '#8c7a6b', // darker brownish
+    '#5c4a45', // dark
+    '#a8a8a8', // gray
+  ];
+
+  const distItems = Object.values(categoryTotals).map((catData, idx) => {
      const pt = totalGasto > 0 ? (catData.val / totalGasto) * 100 : 0;
-     
-     // Find if there's a goal for this category to borrow its color
-     const matchedGoal = goals.find(g => g.title.toLowerCase() === catData.catName.toLowerCase());
-     const colorClass = matchedGoal ? matchedGoal.color : 'bg-surface-variant';
-     
-     let hexColor = '#a8a8a8'; // default surface-variantish
-     if (colorClass.includes('primary')) hexColor = '#7a5336';
-     else if (colorClass.includes('tertiary')) hexColor = '#d7c3b6';
-     else if (colorClass.includes('secondary')) hexColor = '#6e5a56';
-     else if (colorClass.includes('outline')) hexColor = '#eae2cb';
-     else if (colorClass.includes('error')) hexColor = '#c44536';
-     else if (matchedGoal) hexColor = '#95433b';
+     const hexColor = colorPalette[idx % colorPalette.length];
 
      return {
         label: catData.catName,
         val: `${Math.round(pt)}%`,
         rawVal: pt,
         rawTotalVal: catData.val,
-        color: colorClass,
         hexColor
      };
   });
@@ -261,10 +260,6 @@ export const Dashboard: React.FC = () => {
               <h2 className="font-headline text-6xl font-bold text-primary tracking-tighter">
                 R$ {totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </h2>
-              <div className="flex items-center gap-1 text-tertiary bg-surface-container-low px-2 py-1 rounded-full text-xs font-bold">
-                <Icons.TrendingDown size={14} />
-                12%
-              </div>
             </div>
             <p className="text-secondary font-body mt-2 max-w-md">Seus gastos estão {totalGasto > totalMeta ? 'acima' : 'abaixo'} da meta projetada para este mês.</p>
           </div>
@@ -323,7 +318,7 @@ export const Dashboard: React.FC = () => {
               {distItems.slice(0,5).map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.hexColor }}></div>
                     <span className="font-body text-sm text-on-surface">{item.label}</span>
                   </div>
                   <span className="font-body font-bold text-on-surface">{item.val}</span>
