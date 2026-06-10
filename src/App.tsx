@@ -7,6 +7,8 @@ import { Planilha } from './components/Planilha';
 import { ProfileSidebar } from './components/ProfileSidebar';
 import { FinanceProvider } from './context/FinanceContext';
 
+import { AIChatWidget } from './components/AIChatWidget';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('inicio');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -43,6 +45,7 @@ export default function App() {
           isOpen={isProfileOpen}
           onClose={() => setIsProfileOpen(false)}
         />
+        <AIChatWidget />
       </div>
     </FinanceProvider>
   );

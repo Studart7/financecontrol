@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Icons } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinance } from '../context/FinanceContext';
+import { MonthSelector } from './MonthSelector';
 
 export const Metas: React.FC = () => {
   const { 
-    goals, transactions, addGoal, updateGoal, deleteGoal, 
+    goals, currentMonthTransactions: transactions, addGoal, updateGoal, deleteGoal, 
     acceptedRecommendations, acceptRecommendation,
-    aiRecommendations, isLoadingInsights
+    aiRecommendations
   } = useFinance();
   // States para os modais
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -43,7 +44,7 @@ export const Metas: React.FC = () => {
     };
   });
 
-  const totalGasto = enrichedGoals.reduce((acc, curr) => acc + curr.val, 0);
+  const totalGasto = transactions.reduce((acc, curr) => acc + curr.val, 0);
   const totalMeta = enrichedGoals.reduce((acc, curr) => acc + curr.meta, 0);
   const totalProgress = totalMeta > 0 ? (totalGasto / totalMeta) * 100 : 0;
   const isOverBudget = totalGasto > totalMeta;
@@ -121,7 +122,7 @@ export const Metas: React.FC = () => {
             <p className="text-secondary mt-2 text-lg">Gerencie seu patrimônio com elegância e precisão.</p>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">
-
+            <MonthSelector />
             <button 
               onClick={openNewGoalModal}
               className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] whitespace-nowrap"
@@ -169,8 +170,8 @@ export const Metas: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8 space-y-6">
+        <div className="grid grid-cols-1 gap-8">
+          <div className="space-y-6">
             {enrichedGoals.map((cat) => {
               const CatIcon = Icons[cat.iconKey as keyof typeof Icons] || Icons.Metas;
               const TipIcon = Icons[cat.tipIconKey as keyof typeof Icons] || Icons.Lightbulb;
@@ -213,7 +214,7 @@ export const Metas: React.FC = () => {
               );
             })}
 
-            {(!isLoadingInsights && aiRecommendations.length > 0) && (
+            {aiRecommendations.length > 0 && (
               <section className="pt-8">
                 <div className="flex items-center gap-3 mb-6">
                   <Icons.Add className="text-primary" size={24} />
@@ -241,38 +242,6 @@ export const Metas: React.FC = () => {
                 </div>
               </section>
             )}
-          </div>
-
-          <div className="lg:col-span-4 space-y-8">
-            <div className="bg-surface-dim p-8 rounded-xl text-center space-y-4">
-              <h3 className="font-headline font-bold text-on-surface opacity-80 uppercase tracking-widest text-sm">Health Score</h3>
-              <div className="relative inline-flex items-center justify-center">
-                <svg className="w-48 h-48 transform -rotate-90">
-                  <circle className="text-surface-container-low" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeWidth="8"></circle>
-                  <circle className="text-primary" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" strokeDasharray="552.92" strokeDashoffset="88.46" strokeLinecap="round" strokeWidth="12"></circle>
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-6xl font-headline font-bold text-on-surface">84</span>
-                  <span className="text-sm font-body text-secondary font-medium uppercase">ESTÁVEL</span>
-                </div>
-              </div>
-              <p className="text-secondary text-sm px-4">Sua saúde financeira está acima da média de perfis similares. Continue diversificando!</p>
-            </div>
-
-            <div className="relative h-64 rounded-xl overflow-hidden shadow-xl group">
-              <img 
-                alt="Financial Journal" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                src="https://picsum.photos/seed/journal/600/400"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent flex items-end p-6">
-                <div>
-                  <span className="text-[10px] font-body font-bold text-primary-container uppercase tracking-widest mb-1 block">Artigo Recomendado</span>
-                  <h4 className="text-white font-headline font-bold text-lg leading-tight">A Arte de Acumular: Estratégias para o Próximo Trimestre</h4>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </motion.main>

@@ -39,7 +39,10 @@ import {
   Mail,
   Star,
   Sun,
-  Menu
+  Menu,
+  TrendingUp,
+  Receipt,
+  Calendar
 } from 'lucide-react';
 
 export const Icons = {
@@ -83,5 +86,8 @@ export const Icons = {
   Mail: Mail,
   Star: Star,
   Sun: Sun,
-  Menu: Menu
+  Menu: Menu,
+  TrendingUp: TrendingUp,
+  Receipt: Receipt,
+  Calendar: Calendar
 };
