@@ -37,3 +37,13 @@ export const isCurrentMonth = (dateStr: string): boolean => {
   const now = new Date();
   return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
 };
+
+export const isMonthMatch = (dateStr: string, month: number, year: number): boolean => {
+  const date = parseDateString(dateStr);
+  if (!date) return true;
+  return date.getMonth() === month && date.getFullYear() === year;
+};
+
+export const MONTH_NAMES_PT = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+export const MONTH_NAMES_SHORT_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Icons } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinance, Transaction } from '../context/FinanceContext';
+import { MonthSelector } from './MonthSelector';
 
 const parseDateForInput = (dateStr: string) => {
   if (!dateStr) return '';
@@ -30,10 +31,9 @@ const formatDateFromInput = (dateStr: string) => {
 };
 
 export const Planilha: React.FC = () => {
-  const { transactions, goals, removeTransaction, updateTransaction, addTransaction } = useFinance();
+  const { currentMonthTransactions: transactions, goals, removeTransaction, updateTransaction, addTransaction } = useFinance();
   const [statusFilter, setStatusFilter] = useState('all'); // all, pago, pendente
   const [categoryFilter, setCategoryFilter] = useState('Todas as Categorias');
-  const [dateFilter, setDateFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Transaction>>({});
@@ -58,12 +58,6 @@ export const Planilha: React.FC = () => {
     if (categoryFilter !== 'Todas as Categorias' && item.cat !== categoryFilter) return false;
     if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (statusFilter !== 'all' && (statusFilter === 'pago' ? item.status !== 'Liquidado' : item.status !== 'Pendente')) return false;
-    
-    if (dateFilter) {
-      const itemDateISO = parseDateForInput(item.date);
-      if (itemDateISO !== dateFilter) return false;
-    }
-
     return true;
   });
 
@@ -129,7 +123,8 @@ export const Planilha: React.FC = () => {
           <span className="font-body text-xs uppercase tracking-[0.2em] text-secondary mb-2 block">Gestão de Patrimônio</span>
           <h1 className="text-5xl font-extrabold text-primary tracking-tight font-headline">Extrato Completo</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <MonthSelector />
           <button 
             onClick={exportCSV}
             className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
@@ -212,27 +207,6 @@ export const Planilha: React.FC = () => {
               >
                 Pendentes
               </button>
-            </div>
-            
-            <div className="flex items-center gap-2 border-l border-outline-variant/30 pl-6 ml-2">
-              <div className="flex items-center gap-2 bg-surface-container-low rounded px-3 py-1.5 border border-outline-variant/20">
-                <span className="text-xs text-secondary font-bold uppercase tracking-wider">Data:</span>
-                <input 
-                  type="date" 
-                  value={dateFilter}
-                  onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
-                  className="bg-transparent border-none text-sm outline-none text-on-surface cursor-pointer focus:ring-0" 
-                />
-                {dateFilter && (
-                  <button 
-                    onClick={() => { setDateFilter(''); setCurrentPage(1); }}
-                    className="text-secondary hover:text-error ml-1"
-                    title="Limpar filtro"
-                  >
-                    <Icons.Close size={14} />
-                  </button>
-                )}
-              </div>
             </div>
           </div>
           <div className="flex items-center gap-3 bg-surface-container-low rounded-lg px-3 py-1.5 border border-outline-variant/10">

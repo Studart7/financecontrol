@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { isCurrentMonth } from '../utils/date';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import { isMonthMatch } from '../utils/date';
+import { generateLocalInsights, generateLocalRecommendations } from '../utils/insightsAlgorithm';
 
 export interface Transaction {
   id: number;
@@ -30,10 +31,16 @@ export interface AIInsight {
 }
 
 export interface AIRecommendation {
+  id: string;
   title: string;
   description: string;
   suggestedValue: number;
   priority: 'high' | 'medium';
+}
+
+interface SelectedMonth {
+  month: number;
+  year: number;
 }
 
 interface FinanceContextData {
@@ -43,6 +50,8 @@ interface FinanceContextData {
   aiInsights: AIInsight[];
   aiRecommendations: AIRecommendation[];
   isLoadingInsights: boolean;
+  selectedMonth: SelectedMonth;
+  setSelectedMonth: (month: SelectedMonth) => void;
   addGoal: (goal: Omit<Goal, 'id'>) => void;
   updateGoal: (id: number, data: Partial<Goal>) => void;
   deleteGoal: (id: number) => void;
@@ -61,11 +70,10 @@ export const useFinance = () => useContext(FinanceContext);
 const API_URL = 'http://localhost:3001/api';
 
 export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) => {
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<SelectedMonth>({ month: now.getMonth(), year: now.getFullYear() });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
-  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
-  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [acceptedRecommendations, setAcceptedRecommendations] = useState<string[]>([]);
 
   const fetchTransactions = useCallback(async () => {
@@ -94,38 +102,13 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
     }
   }, []);
 
-  const fetchInsights = useCallback(async (txList: Transaction[]) => {
-    setIsLoadingInsights(true);
-    try {
-      const res = await fetch(`${API_URL}/ai/insights`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: txList.map(t => ({ date: t.date, name: t.name, cat: t.cat, val: t.val })) })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAiInsights(data.insights || []);
-        setAiRecommendations(data.recommendations || []);
-      }
-    } catch (e) {
-      console.error("Failed to fetch AI insights:", e);
-    } finally {
-      setIsLoadingInsights(false);
-    }
-  }, []);
-
-  const refreshInsights = useCallback(() => {
-    fetchInsights(transactions);
-  }, [transactions, fetchInsights]);
-
   React.useEffect(() => {
     const init = async () => {
-      const txData = await fetchTransactions();
+      await fetchTransactions();
       await fetchGoals();
-      fetchInsights(txData);
     };
     init();
-  }, [fetchTransactions, fetchGoals, fetchInsights]);
+  }, [fetchTransactions, fetchGoals]);
 
   const addGoal = async (goal: Omit<Goal, 'id'>) => {
     try {
@@ -212,11 +195,23 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
     setAcceptedRecommendations(prev => [...prev, id]);
   };
 
-  const currentMonthTransactions = transactions.filter(t => isCurrentMonth(t.date));
+  const currentMonthTransactions = transactions.filter(t => isMonthMatch(t.date, selectedMonth.month, selectedMonth.year));
+
+  const aiInsights = useMemo(() => {
+    return generateLocalInsights(currentMonthTransactions, goals);
+  }, [currentMonthTransactions, goals]);
+
+  const aiRecommendations = useMemo(() => {
+    return generateLocalRecommendations(currentMonthTransactions, goals, acceptedRecommendations);
+  }, [currentMonthTransactions, goals, acceptedRecommendations]);
+
+  const isLoadingInsights = false;
+  const refreshInsights = () => {};
 
   return (
     <FinanceContext.Provider value={{
       transactions, currentMonthTransactions, goals, aiInsights, aiRecommendations, isLoadingInsights,
+      selectedMonth, setSelectedMonth,
       addGoal, updateGoal, deleteGoal,
       addTransaction, updateTransaction, removeTransaction,
       acceptedRecommendations, acceptRecommendation, refreshInsights

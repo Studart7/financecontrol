@@ -8,7 +8,7 @@ interface ProfileSidebarProps {
   onClose: () => void;
 }
 
-type SidebarView = 'menu' | 'personal' | 'notifications' | 'settings' | 'privacy';
+type SidebarView = 'menu' | 'personal' | 'notifications' | 'settings' | 'privacy' | 'developer';
 
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose }) => {
   const [activeView, setActiveView] = useState<SidebarView>('menu');
@@ -47,6 +47,7 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ isOpen, onClose 
               {activeView === 'notifications' && <NotificationsView key="notifications" goBack={goBack} />}
               {activeView === 'settings' && <SettingsView key="settings" goBack={goBack} />}
               {activeView === 'privacy' && <PrivacyView key="privacy" goBack={goBack} />}
+              {activeView === 'developer' && <DeveloperView key="developer" goBack={goBack} />}
             </AnimatePresence>
           </motion.aside>
         </>
@@ -93,7 +94,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onClose, navigateTo, transactions, 
       {[
         { label: 'Recibos', value: String(transactions.length) },
         { label: 'Metas', value: String(goals.length) },
-        { label: 'Score', value: '84' },
+        { label: 'Categorias', value: String(new Set(transactions.map(t => t.cat)).size) },
       ].map((stat) => (
         <div key={stat.label} className="bg-surface p-4 text-center">
           <span className="block font-headline text-xl font-bold text-primary">{stat.value}</span>
@@ -114,6 +115,11 @@ const MainMenu: React.FC<MainMenuProps> = ({ onClose, navigateTo, transactions, 
         <p className="px-3 text-[10px] font-bold text-secondary uppercase tracking-widest mb-2">Preferências</p>
         <SidebarItem icon={Icons.Settings} label="Configurações Gerais" onClick={() => navigateTo('settings')} />
         <SidebarItem icon={Icons.Star} label="Plano & Assinatura" accent />
+      </div>
+      <div className="h-px bg-outline-variant/15 mx-3 my-3"></div>
+      <div className="mb-2">
+        <p className="px-3 text-[10px] font-bold text-secondary uppercase tracking-widest mb-2">Avançado</p>
+        <SidebarItem icon={Icons.Language} label="Área de Desenvolvedor" onClick={() => navigateTo('developer')} />
       </div>
     </nav>
 
@@ -281,6 +287,169 @@ const PrivacyView: React.FC<{ goBack: () => void }> = ({ goBack }) => {
             Excluir Minha Conta
           </button>
         </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// =======================================
+// DEVELOPER VIEW (API Key)
+// =======================================
+const API_URL = 'http://localhost:3001/api';
+
+const DeveloperView: React.FC<{ goBack: () => void }> = ({ goBack }) => {
+  const [apiKey, setApiKey] = useState('');
+  const [maskedKey, setMaskedKey] = useState('');
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  React.useEffect(() => {
+    fetch(`${API_URL}/settings/api-key`)
+      .then(res => res.json())
+      .then(data => {
+        setIsConfigured(data.configured);
+        setMaskedKey(data.maskedKey || '');
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleTest = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`${API_URL}/settings/test-api-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: apiKey || undefined })
+      });
+      const data = await res.json();
+      setTestResult({ success: data.success, message: data.message || data.error });
+    } catch {
+      setTestResult({ success: false, message: 'Erro de conexão com o servidor.' });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!apiKey.trim()) return;
+    setIsSaving(true);
+    setSaveResult(null);
+    try {
+      const res = await fetch(`${API_URL}/settings/api-key`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: apiKey.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsConfigured(true);
+        setMaskedKey(data.maskedKey);
+        setApiKey('');
+        setSaveResult({ success: true, message: 'Chave salva com sucesso!' });
+      } else {
+        setSaveResult({ success: false, message: data.error || 'Erro ao salvar.' });
+      }
+    } catch {
+      setSaveResult({ success: false, message: 'Erro de conexão com o servidor.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.15 }} className="flex flex-col h-full">
+      <SubHeader title="Área de Desenvolvedor" goBack={goBack} />
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        
+        {/* Status */}
+        <div className={`flex items-center gap-3 p-4 rounded-xl border ${isConfigured ? 'bg-tertiary/5 border-tertiary/20' : 'bg-error/5 border-error/20'}`}>
+          <div className={`w-3 h-3 rounded-full ${isConfigured ? 'bg-tertiary' : 'bg-error'}`}></div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-on-surface">
+              {isConfigured ? 'API Key configurada' : 'API Key não configurada'}
+            </p>
+            {isConfigured && maskedKey && (
+              <p className="text-xs text-secondary mt-0.5 font-mono truncate">{maskedKey}</p>
+            )}
+          </div>
+        </div>
+
+        {/* API Key Input */}
+        <div>
+          <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-3">Chave da API Gemini</p>
+          <div className="relative">
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={e => { setApiKey(e.target.value); setSaveResult(null); setTestResult(null); }}
+              placeholder={isConfigured ? 'Inserir nova chave para substituir...' : 'Cole sua chave da API aqui...'}
+              className="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-primary transition-all p-3 pr-10 text-on-surface font-mono text-sm rounded-t outline-none"
+            />
+            <button
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-secondary hover:text-primary transition-colors"
+            >
+              {showKey ? <Icons.Privacy size={16} /> : <Icons.Search size={16} />}
+            </button>
+          </div>
+          <p className="text-[10px] text-secondary mt-2 leading-relaxed">
+            Obtenha sua chave em <span className="text-primary font-bold">aistudio.google.com</span>. A chave é salva localmente no arquivo .env.local.
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="space-y-3">
+          <button
+            onClick={handleTest}
+            disabled={isTesting}
+            className="w-full py-3 text-sm font-bold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isTesting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                Testando...
+              </>
+            ) : (
+              <>
+                <Icons.Verified size={16} />
+                Testar Conexão
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={!apiKey.trim() || isSaving}
+            className="w-full bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-bold py-3 rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Salvando...
+              </>
+            ) : (
+              'Salvar Chave'
+            )}
+          </button>
+        </div>
+
+        {/* Feedback */}
+        {testResult && (
+          <div className={`p-3 rounded-lg text-sm font-medium ${testResult.success ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'}`}>
+            {testResult.message}
+          </div>
+        )}
+        {saveResult && (
+          <div className={`p-3 rounded-lg text-sm font-medium ${saveResult.success ? 'bg-tertiary/10 text-tertiary' : 'bg-error/10 text-error'}`}>
+            {saveResult.message}
+          </div>
+        )}
+
       </div>
     </motion.div>
   );

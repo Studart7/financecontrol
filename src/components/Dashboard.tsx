@@ -2,6 +2,7 @@ import React from 'react';
 import { Icons } from '../lib/icons';
 import { motion } from 'motion/react';
 import { useFinance } from '../context/FinanceContext';
+import { MonthSelector } from './MonthSelector';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -239,7 +240,8 @@ export const Dashboard: React.FC = () => {
           <span className="font-body text-xs uppercase tracking-[0.2em] text-secondary opacity-70">Seu Dinheiro</span>
           <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mt-1">Seu Resumo</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
+          <MonthSelector />
           <button 
             onClick={exportPDF}
             className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-primary to-primary-container text-surface-container-lowest font-semibold rounded-lg shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
@@ -280,17 +282,7 @@ export const Dashboard: React.FC = () => {
         <div className="md:col-span-4 bg-surface-container-low p-8 rounded-xl space-y-6">
           <h3 className="font-headline text-xl font-semibold text-on-surface">O que notamos este mês</h3>
           <div className="space-y-4">
-            {isLoadingInsights ? (
-              [1, 2, 3].map(i => (
-                <div key={i} className="flex gap-4 p-4 bg-surface-container-lowest rounded-lg border-l-4 border-outline-variant shadow-sm animate-pulse">
-                  <div className="w-5 h-5 rounded bg-surface-container-low"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-32 bg-surface-container-low rounded"></div>
-                    <div className="h-3 w-full bg-surface-container-low rounded"></div>
-                  </div>
-                </div>
-              ))
-            ) : aiInsights.length > 0 ? (
+            {aiInsights.length > 0 ? (
               aiInsights.map((insight, i) => {
                 const iconMap: Record<string, any> = { warning: Icons.Warning, opportunity: Icons.TrendingDown, info: Icons.Outros || Icons.Warning };
                 const colorMap: Record<string, string> = { warning: 'text-error', opportunity: 'text-tertiary', info: 'text-primary' };
