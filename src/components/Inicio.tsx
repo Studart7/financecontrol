@@ -101,7 +101,8 @@ export const Inicio: React.FC = () => {
               date: txDate,
               name: est,
               cat: cat,
-              val: val
+              val: val,
+              status: data.status || 'Liquidado'
             }, 
             fileId 
           }];
@@ -124,7 +125,7 @@ export const Inicio: React.FC = () => {
       name: editedData.name,
       cat: editedData.cat,
       val: editedData.val,
-      status: 'Liquidado',
+      status: (currentItem.data.status === 'Pendente' ? 'Pendente' : 'Liquidado') as 'Liquidado' | 'Pendente',
       iconKey: editedData.cat === 'Alimentação' ? 'Alimentacao' : editedData.cat === 'Transporte' ? 'Transporte' : editedData.cat === 'Saúde' ? 'History' : editedData.cat === 'Moradia' ? 'Inicio' : 'Outros'
     };
 

@@ -8,7 +8,7 @@ import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
-import { processReceipt, processChatTransactions } from './services/gemini.service';
+import { processReceipt, processChatTransactions, processManagerChat } from './services/gemini.service';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -163,6 +163,60 @@ app.post('/api/gemini/chat', async (req, res) => {
   } catch (error: any) {
     console.error('Error processing chat:', error);
     res.status(500).json({ error: error.message || 'Failed to process chat input' });
+  }
+});
+
+// ===== AI MANAGER CHAT =====
+
+app.get('/api/chat/history', async (_req, res) => {
+  try {
+    const messages = await prisma.chatMessage.findMany({
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching chat history:', error);
+    res.status(500).json({ error: 'Failed to fetch chat history' });
+  }
+});
+
+app.delete('/api/chat/history', async (_req, res) => {
+  try {
+    await prisma.chatMessage.deleteMany();
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error clearing chat history:', error);
+    res.status(500).json({ error: 'Failed to clear chat history' });
+  }
+});
+
+app.post('/api/gemini/manager', async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Mensagem não fornecida.' });
+    }
+
+    // Save user message
+    await prisma.chatMessage.create({ data: { role: 'user', text: message } });
+
+    // Fetch recent history for context
+    const history = await prisma.chatMessage.findMany({
+      orderBy: { createdAt: 'asc' },
+      take: 40
+    });
+
+    const historyForAI = history.slice(0, -1).map(m => ({ role: m.role, text: m.text }));
+
+    const result = await processManagerChat(historyForAI, message);
+
+    // Save AI reply
+    await prisma.chatMessage.create({ data: { role: 'model', text: result.reply } });
+
+    res.json({ reply: result.reply, dataChanged: result.dataChanged });
+  } catch (error: any) {
+    console.error('Error in manager chat:', error);
+    res.status(500).json({ error: error.message || 'Erro no chat do assistente.' });
   }
 });
 

@@ -61,6 +61,7 @@ interface FinanceContextData {
   acceptedRecommendations: string[];
   acceptRecommendation: (id: string, goalData?: Omit<Goal, 'id'>) => void;
   refreshInsights: () => void;
+  refreshData: () => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextData>({} as FinanceContextData);
@@ -208,13 +209,19 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
   const isLoadingInsights = false;
   const refreshInsights = () => {};
 
+  const refreshData = useCallback(async () => {
+    await fetchTransactions();
+    await fetchGoals();
+  }, [fetchTransactions, fetchGoals]);
+
   return (
     <FinanceContext.Provider value={{
       transactions, currentMonthTransactions, goals, aiInsights, aiRecommendations, isLoadingInsights,
       selectedMonth, setSelectedMonth,
       addGoal, updateGoal, deleteGoal,
       addTransaction, updateTransaction, removeTransaction,
-      acceptedRecommendations, acceptRecommendation, refreshInsights
+      acceptedRecommendations, acceptRecommendation, refreshInsights,
+      refreshData
     }}>
       {children}
     </FinanceContext.Provider>

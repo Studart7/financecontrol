@@ -42,7 +42,13 @@ import {
   Menu,
   TrendingUp,
   Receipt,
-  Calendar
+  Calendar,
+  Maximize2,
+  Minimize2,
+  Send,
+  MessageSquare,
+  RotateCcw,
+  Bot
 } from 'lucide-react';
 
 export const Icons = {
@@ -89,5 +95,11 @@ export const Icons = {
   Menu: Menu,
   TrendingUp: TrendingUp,
   Receipt: Receipt,
-  Calendar: Calendar
+  Calendar: Calendar,
+  Maximize: Maximize2,
+  Minimize: Minimize2,
+  Send: Send,
+  MessageSquare: MessageSquare,
+  Reset: RotateCcw,
+  Bot: Bot
 };
