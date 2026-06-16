@@ -1,3 +1,4 @@
+import { MonopolyManIcon } from '../components/MonopolyManIcon';
 import { 
   LayoutDashboard, 
   Target, 
@@ -47,8 +48,7 @@ import {
   Minimize2,
   Send,
   MessageSquare,
-  RotateCcw,
-  Bot
+  RotateCcw
 } from 'lucide-react';
 
 export const Icons = {
@@ -101,5 +101,5 @@ export const Icons = {
   Send: Send,
   MessageSquare: MessageSquare,
   Reset: RotateCcw,
-  Bot: Bot
+  Bot: MonopolyManIcon
 };

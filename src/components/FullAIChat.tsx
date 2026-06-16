@@ -155,8 +155,8 @@ export const FullAIChat: React.FC<FullAIChatProps> = ({ isOpen, isMini, onClose,
           {/* Header */}
           <div className="bg-gradient-to-r from-primary to-primary-container px-4 py-3 flex items-center justify-between shadow-lg flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
-                <Icons.Bot size={18} className="text-white" />
+              <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center overflow-hidden">
+                <Icons.Bot size={36} className="text-white" />
               </div>
               <div>
                 <h1 className="text-white font-headline font-bold text-sm">Secretário IA</h1>
@@ -208,8 +208,8 @@ export const FullAIChat: React.FC<FullAIChatProps> = ({ isOpen, isMini, onClose,
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                    <Icons.Bot size={32} className="text-primary" />
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 overflow-hidden">
+                    <Icons.Bot size={64} className="text-primary" />
                   </div>
                   <h2 className="text-lg font-headline font-bold text-on-surface mb-2">
                     Olá! Eu sou seu Secretário Financeiro 👋
@@ -245,14 +245,14 @@ export const FullAIChat: React.FC<FullAIChatProps> = ({ isOpen, isMini, onClose,
                   >
                     <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                       {/* Avatar */}
-                      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ${
+                      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden ${
                         msg.role === 'user' 
                           ? 'bg-primary/10 text-primary' 
                           : 'bg-tertiary/10 text-tertiary'
                       }`}>
                         {msg.role === 'user' 
                           ? <Icons.Account size={16} />
-                          : <Icons.Bot size={16} />
+                          : <Icons.Bot size={32} isBlack />
                         }
                       </div>
                       {/* Bubble */}
@@ -283,8 +283,8 @@ export const FullAIChat: React.FC<FullAIChatProps> = ({ isOpen, isMini, onClose,
                   className="flex justify-start"
                 >
                   <div className="flex gap-3 items-start">
-                    <div className="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center flex-shrink-0">
-                      <Icons.Bot size={16} className="text-tertiary" />
+                    <div className="w-8 h-8 rounded-lg bg-tertiary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <Icons.Bot size={32} className="text-tertiary" isBlack />
                     </div>
                     <div className="bg-surface-container-low border border-outline-variant/20 rounded-2xl rounded-tl-md px-5 py-4">
                       <div className="flex gap-1.5">

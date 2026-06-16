@@ -24,7 +24,7 @@ export const AIChatWidget: React.FC = () => {
           }}
           className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container text-white rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl transition-shadow"
         >
-          {isOpen || isFullscreen ? <Icons.Close size={24} /> : <Icons.Bot size={24} />}
+          {isOpen || isFullscreen ? <Icons.Close size={24} /> : <Icons.Bot size={40} />}
         </motion.button>
       </div>
 

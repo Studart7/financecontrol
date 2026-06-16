@@ -267,6 +267,8 @@ const TOOL_DECLARATIONS = [
 
 async function executeTool(name: string, args: any): Promise<any> {
   const today = new Date().toISOString().split('T')[0];
+  const toInt = (v: any) => typeof v === 'number' ? v : parseInt(String(v), 10);
+  const toFloat = (v: any) => typeof v === 'number' ? v : parseFloat(String(v));
 
   function formatToAppDate(dateStr: string) {
     if (!dateStr || !dateStr.includes('-')) return dateStr;
@@ -278,7 +280,7 @@ async function executeTool(name: string, args: any): Promise<any> {
   switch (name) {
     case "listTransactions": {
       const txs = await prisma.transaction.findMany({ orderBy: { id: 'desc' }, take: 50 });
-      return txs;
+      return { transactions: txs };
     }
     case "createTransaction": {
       const tx = await prisma.transaction.create({
@@ -294,44 +296,71 @@ async function executeTool(name: string, args: any): Promise<any> {
       return { success: true, transaction: tx };
     }
     case "updateTransaction": {
+      const txId = toInt(args.id);
+      if (isNaN(txId)) {
+        return { error: `ID da transação inválido: ${args.id}` };
+      }
       const updateData: any = {};
       if (args.name !== undefined) updateData.name = args.name;
-      if (args.val !== undefined) updateData.val = args.val;
+      if (args.val !== undefined) updateData.val = toFloat(args.val);
       if (args.cat !== undefined) updateData.cat = args.cat;
       if (args.date !== undefined) updateData.date = formatToAppDate(args.date);
       if (args.status !== undefined) updateData.status = args.status;
-      const tx = await prisma.transaction.update({ where: { id: args.id }, data: updateData });
+      const tx = await prisma.transaction.update({ where: { id: txId }, data: updateData });
       return { success: true, transaction: tx };
     }
     case "deleteTransaction": {
-      await prisma.transaction.delete({ where: { id: args.id } });
-      return { success: true, deleted: args.id };
+      const delTxId = toInt(args.id);
+      if (isNaN(delTxId)) {
+        return { error: `ID da transação inválido: ${args.id}` };
+      }
+      await prisma.transaction.delete({ where: { id: delTxId } });
+      return { success: true, deleted: delTxId };
     }
     case "listGoals": {
       const goals = await prisma.goal.findMany({ orderBy: { id: 'desc' } });
-      return goals;
+      return { goals: goals.map(g => ({ id: g.id, title: g.title, meta: g.meta, tip: g.tip })) };
     }
     case "createGoal": {
+      const metaValue = toFloat(args.meta);
+      if (isNaN(metaValue) || metaValue <= 0) {
+        return { error: `Valor da meta inválido: ${args.meta}. Peça ao usuário para confirmar o valor.` };
+      }
       const goal = await prisma.goal.create({
         data: {
           title: args.title,
-          meta: args.meta,
+          meta: metaValue,
           tip: args.tip || ''
         }
       });
       return { success: true, goal };
     }
     case "updateGoal": {
+      const goalId = toInt(args.id);
+      if (isNaN(goalId)) {
+        return { error: `ID da meta inválido: ${args.id}` };
+      }
       const updateData: any = {};
       if (args.title !== undefined) updateData.title = args.title;
-      if (args.meta !== undefined) updateData.meta = args.meta;
+      if (args.meta !== undefined) {
+        const metaVal = toFloat(args.meta);
+        if (isNaN(metaVal) || metaVal <= 0) {
+          return { error: `Valor da meta inválido: ${args.meta}. Peça ao usuário para confirmar o valor.` };
+        }
+        updateData.meta = metaVal;
+      }
       if (args.tip !== undefined) updateData.tip = args.tip;
-      const goal = await prisma.goal.update({ where: { id: args.id }, data: updateData });
+      console.log(`[updateGoal] Updating goal ${goalId} with:`, updateData);
+      const goal = await prisma.goal.update({ where: { id: goalId }, data: updateData });
       return { success: true, goal };
     }
     case "deleteGoal": {
-      await prisma.goal.delete({ where: { id: args.id } });
-      return { success: true, deleted: args.id };
+      const delGoalId = toInt(args.id);
+      if (isNaN(delGoalId)) {
+        return { error: `ID da meta inválido: ${args.id}` };
+      }
+      await prisma.goal.delete({ where: { id: delGoalId } });
+      return { success: true, deleted: delGoalId };
     }
     default:
       return { error: `Tool ${name} not found` };
@@ -372,6 +401,23 @@ PORTANTO:
   - status: "Liquidado"
 - Use listGoals para verificar que a meta existe e pegar o título exato antes de criar a transação.
 - Assim o progresso da meta será atualizado automaticamente na interface.
+
+## REGRA CRÍTICA: CONFIRMAR VALOR ANTES DE CRIAR META
+
+SEMPRE que o usuário pedir para CRIAR uma nova meta, ANTES de chamar createGoal, você DEVE:
+1. Perguntar ao usuário qual o valor (limite de orçamento) da meta, caso ele não tenha informado.
+2. Se o usuário já informou o valor, confirme o valor com ele antes de criar. Exemplo: "Vou criar a meta 'Alimentação' com orçamento de R$ 800. Confirma?"
+3. NUNCA crie uma meta com valor 0 ou sem valor definido.
+4. Só chame createGoal DEPOIS que o usuário confirmar o valor.
+
+## REGRA CRÍTICA: ATUALIZAR METAS CORRETAMENTE
+
+Quando o usuário pedir para ATUALIZAR o valor de uma meta:
+1. PRIMEIRO use listGoals para encontrar o ID exato da meta.
+2. Use o campo "id" (numérico inteiro) retornado pelo listGoals.
+3. Chame updateGoal com o id correto e o campo "meta" com o novo valor numérico.
+4. Exemplo: se a meta "Saúde e Academia" tem id=5 e o usuário quer mudar para 2000, chame updateGoal com {id: 5, meta: 2000}.
+5. NUNCA invente um ID. Sempre consulte listGoals antes.
 
 Regras gerais:
 1. Quando o usuário pedir para criar/alterar/deletar algo, USE as ferramentas disponíveis para executar a ação no banco de dados.
@@ -442,10 +488,11 @@ Regras gerais:
             if (['createTransaction', 'updateTransaction', 'deleteTransaction', 'createGoal', 'updateGoal', 'deleteGoal'].includes(fc.name)) {
               dataChanged = true;
             }
+            const safeResult = Array.isArray(result) ? { data: result } : (result || { success: true });
             functionResponses.push({
               functionResponse: {
                 name: fc.name,
-                response: result
+                response: safeResult
               }
             });
           } catch (toolError: any) {
