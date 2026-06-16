@@ -51,7 +51,10 @@ async function callGeminiWithFallback(ai: GoogleGenAI, contents: any[], response
     } catch (error: any) {
       console.error(`Model ${model} failed:`, error.message || error);
       lastError = error;
-      if (error.status === 503 || error.message?.includes('503')) continue;
+      let errMsg = error?.message || String(error);
+      if (error?.status === 503 || errMsg.includes('503') || error?.status === 429 || errMsg.includes('429') || errMsg.includes('quota')) {
+        continue;
+      }
       throw handleError(error);
     }
   }
@@ -265,6 +268,13 @@ const TOOL_DECLARATIONS = [
 async function executeTool(name: string, args: any): Promise<any> {
   const today = new Date().toISOString().split('T')[0];
 
+  function formatToAppDate(dateStr: string) {
+    if (!dateStr || !dateStr.includes('-')) return dateStr;
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const [y, m, d] = dateStr.split('-');
+    return `${parseInt(d, 10).toString().padStart(2, '0')} ${months[parseInt(m, 10) - 1]} ${y}`;
+  }
+
   switch (name) {
     case "listTransactions": {
       const txs = await prisma.transaction.findMany({ orderBy: { id: 'desc' }, take: 50 });
@@ -276,7 +286,7 @@ async function executeTool(name: string, args: any): Promise<any> {
           name: args.name,
           val: args.val,
           cat: args.cat,
-          date: args.date || today,
+          date: formatToAppDate(args.date || today),
           status: args.status || 'Liquidado',
           iconKey: 'Outros'
         }
@@ -288,7 +298,7 @@ async function executeTool(name: string, args: any): Promise<any> {
       if (args.name !== undefined) updateData.name = args.name;
       if (args.val !== undefined) updateData.val = args.val;
       if (args.cat !== undefined) updateData.cat = args.cat;
-      if (args.date !== undefined) updateData.date = args.date;
+      if (args.date !== undefined) updateData.date = formatToAppDate(args.date);
       if (args.status !== undefined) updateData.status = args.status;
       const tx = await prisma.transaction.update({ where: { id: args.id }, data: updateData });
       return { success: true, transaction: tx };
@@ -471,7 +481,10 @@ Regras gerais:
     } catch (error: any) {
       console.error(`[Manager] Model ${model} failed:`, error.message || error);
       lastError = error;
-      if (error.status === 503 || error.message?.includes('503')) continue;
+      let errMsg = error?.message || String(error);
+      if (error?.status === 503 || errMsg.includes('503') || error?.status === 429 || errMsg.includes('429') || errMsg.includes('quota')) {
+        continue;
+      }
       throw handleError(error);
     }
   }

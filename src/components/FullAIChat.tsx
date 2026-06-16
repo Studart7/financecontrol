@@ -301,32 +301,42 @@ export const FullAIChat: React.FC<FullAIChatProps> = ({ isOpen, isMini, onClose,
           </div>
 
           {/* Input Area */}
-          <div className="flex-shrink-0 border-t border-outline-variant/20 bg-surface">
-            <div className={`max-w-3xl mx-auto px-4 ${isMini ? 'py-3' : 'py-4'}`}>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Escreva algo..."
-                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-2xl px-4 py-3 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none min-h-[48px] max-h-[120px] transition-all"
-                    rows={1}
-                    disabled={isLoading}
-                  />
+          <div className="flex-shrink-0 bg-surface/80 backdrop-blur-md border-t border-outline-variant/10">
+            <div className={`max-w-3xl mx-auto px-4 ${isMini ? 'py-3' : 'py-5'}`}>
+              <div className="relative flex items-end w-full bg-surface-container-low border border-outline-variant/40 rounded-3xl shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all duration-300">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => {
+                    setInput(e.target.value);
+                    e.target.style.height = '52px';
+                    const scrollHeight = e.target.scrollHeight;
+                    e.target.style.height = scrollHeight > 52 ? `${Math.min(scrollHeight, 150)}px` : '52px';
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Mensagem para o Secretário IA..."
+                  className="w-full bg-transparent px-6 py-4 pr-14 text-sm outline-none resize-none text-on-surface placeholder-secondary/50"
+                  style={{ minHeight: '52px', height: '52px' }}
+                  disabled={isLoading}
+                />
+                <div className="absolute right-2 bottom-2">
+                  <button
+                    onClick={sendMessage}
+                    disabled={!input.trim() || isLoading}
+                    className="w-9 h-9 flex items-center justify-center bg-primary text-white rounded-full shadow-md hover:bg-primary-container hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-30 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <Icons.Send size={16} className={input.trim() ? "translate-x-0.5" : ""} />
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim() || isLoading}
-                  className="p-3 bg-primary text-white rounded-2xl shadow-sm hover:bg-primary-container transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-                >
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <Icons.Send size={20} />
-                  )}
-                </button>
+              </div>
+              <div className="mt-2.5 text-center">
+                <span className="text-[10px] text-secondary/50 font-medium">
+                  A IA pode cometer erros. Verifique as informações importantes.
+                </span>
               </div>
             </div>
           </div>
