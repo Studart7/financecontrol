@@ -142,8 +142,8 @@ app.delete('/api/goals/:id', async (req, res) => {
 app.post('/api/process-receipt', upload.single('receipt'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const result = await processReceipt(req.file.buffer, req.file.mimetype);
-    res.json(result);
+    const results = await processReceipt(req.file.buffer, req.file.mimetype);
+    res.json({ transactions: results });
   } catch (error: any) {
     console.error('Error processing receipt:', error);
     res.status(500).json({ error: error.message || 'Failed to process receipt' });

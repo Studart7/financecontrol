@@ -65,30 +65,43 @@ export async function processReceipt(fileBuffer: Buffer, mimeType: string) {
   const ai = getAI();
 
   const prompt = `Você é um assistente financeiro especialista em extrair dados de documentos financeiros.
-O arquivo enviado pode ser uma NOTA FISCAL, RECIBO, BOLETO, FATURA, PRINT DE TELA de aplicativo (como iFood, Uber, bancos, etc.), ou QUALQUER OUTRO documento que contenha informações sobre um gasto ou pagamento.
+O arquivo enviado pode ser:
+- Uma NOTA FISCAL, RECIBO, BOLETO ou FATURA (geralmente 1 gasto)
+- Um PRINT DE TELA com MÚLTIPLAS notificações de banco/cartão (ex: várias notificações do Santander, Nubank, Itaú, etc.)
+- Um PRINT DE TELA de aplicativo (iFood, Uber, etc.)
+- QUALQUER OUTRO documento com informações de gasto/pagamento
 
-Analise a imagem com atenção e extraia as seguintes informações:
-- O nome do estabelecimento, serviço ou empresa (ex: "iFood", "Claro", "Farmácia São Paulo", "CPFL Energia")
-- O valor total em formato numérico (ex: 120.50). Para boletos, use o valor do documento. Para prints, use o valor total visível.
-- A data de emissão/vencimento no formato YYYY-MM-DD. Se não houver data visível, retorne null.
-- Uma categoria sugerida para a despesa. Escolha APENAS uma das opções a seguir:
-  ['Alimentação', 'Moradia', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Geral']
-- O status do pagamento: "Liquidado" ou "Pendente".
-  REGRA PARA BOLETOS PARCELADOS: Se o documento for um boleto com informações de parcelas (ex: "Parcela 3/12", "3 de 10"), e NÃO for a ÚLTIMA parcela (ex: parcela 3 de 12 → ainda faltam 9), o status DEVE ser "Pendente".
-  Se for a última parcela (ex: "Parcela 12/12") ou se não houver informação de parcelas (nota fiscal, recibo simples), o status deve ser "Liquidado".
-- Se houver informação de parcelas, extraia também: "installmentCurrent" (parcela atual, ex: 3) e "installmentTotal" (total de parcelas, ex: 12). Se não houver parcelas, retorne null para ambos.
+## REGRA CRÍTICA: MÚLTIPLAS NOTIFICAÇÕES
 
-Devolva a resposta EXCLUSIVAMENTE em formato JSON.
-Formato exato esperado:
+Se a imagem contiver MÚLTIPLAS notificações de gastos (como prints de notificações de banco empilhadas), você DEVE extrair CADA notificação como um item separado no array "transactions".
+Leia cada notificação individualmente, de cima para baixo, na ordem em que aparecem na imagem.
+
+Para CADA gasto encontrado, extraia:
+- "establishment": nome do estabelecimento/serviço/empresa
+- "val": valor numérico (ex: 120.50)
+- "date": data no formato YYYY-MM-DD. Se não houver data visível, retorne null.
+- "category": categoria sugerida. Escolha APENAS uma entre: ['Alimentação', 'Moradia', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Geral']
+- "status": "Liquidado" ou "Pendente"
+  REGRA PARA BOLETOS PARCELADOS: Se for boleto parcelado e NÃO for a última parcela, status = "Pendente".
+- "installmentCurrent": parcela atual (ou null)
+- "installmentTotal": total de parcelas (ou null)
+
+Devolva a resposta EXCLUSIVAMENTE em formato JSON com o seguinte formato:
 {
-  "establishment": "Nome da Loja/Serviço",
-  "category": "Categoria",
-  "val": 150.00,
-  "date": "2024-05-20",
-  "status": "Liquidado",
-  "installmentCurrent": null,
-  "installmentTotal": null
-}`;
+  "transactions": [
+    {
+      "establishment": "Nome da Loja/Serviço",
+      "category": "Categoria",
+      "val": 150.00,
+      "date": "2024-05-20",
+      "status": "Liquidado",
+      "installmentCurrent": null,
+      "installmentTotal": null
+    }
+  ]
+}
+
+IMPORTANTE: Mesmo que haja apenas 1 gasto, retorne dentro do array "transactions".`;
 
   try {
     const parsed = await callGeminiWithFallback(ai, [
@@ -96,28 +109,34 @@ Formato exato esperado:
       prompt
     ]);
 
-    const installmentCurrent = parsed.installmentCurrent ? Number(parsed.installmentCurrent) : null;
-    const installmentTotal = parsed.installmentTotal ? Number(parsed.installmentTotal) : null;
+    const rawTransactions = Array.isArray(parsed.transactions) ? parsed.transactions : [parsed];
 
-    let status: string = parsed.status || 'Liquidado';
-    if (installmentCurrent && installmentTotal && installmentCurrent < installmentTotal) {
-      status = 'Pendente';
-    }
+    const results = rawTransactions.map((item: any) => {
+      const installmentCurrent = item.installmentCurrent ? Number(item.installmentCurrent) : null;
+      const installmentTotal = item.installmentTotal ? Number(item.installmentTotal) : null;
 
-    let establishment = parsed.establishment || 'Desconhecido';
-    if (installmentCurrent && installmentTotal) {
-      establishment = `${establishment} (${installmentCurrent}/${installmentTotal})`;
-    }
+      let status: string = item.status || 'Liquidado';
+      if (installmentCurrent && installmentTotal && installmentCurrent < installmentTotal) {
+        status = 'Pendente';
+      }
 
-    return {
-      establishment,
-      category: parsed.category || "Geral",
-      val: typeof parsed.val === 'number' ? parsed.val : parseFloat(parsed.val) || 0,
-      date: parsed.date || null,
-      status,
-      installmentCurrent,
-      installmentTotal
-    };
+      let establishment = item.establishment || 'Desconhecido';
+      if (installmentCurrent && installmentTotal) {
+        establishment = `${establishment} (${installmentCurrent}/${installmentTotal})`;
+      }
+
+      return {
+        establishment,
+        category: item.category || "Geral",
+        val: typeof item.val === 'number' ? item.val : parseFloat(item.val) || 0,
+        date: item.date || null,
+        status,
+        installmentCurrent,
+        installmentTotal
+      };
+    });
+
+    return results;
   } catch (error: any) {
     console.error("Error processing receipt:", error);
     throw new Error(error.message || "Erro na integração com IA para leitura do documento.");

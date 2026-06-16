@@ -37,7 +37,7 @@ export const Inicio: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addTransaction, currentMonthTransactions } = useFinance();
-  const [pendingQueue, setPendingQueue] = useState<Array<{data: any, fileId: string}>>([]);
+  const [pendingQueue, setPendingQueue] = useState<Array<{data: any, fileId: string, transactionIndex: number, totalTransactions: number}>>([]);
 
   const processFiles = useCallback((fileList: FileList | null) => {
     if (!fileList) return;
@@ -82,31 +82,37 @@ export const Inicio: React.FC = () => {
         }
 
         const data = await res.json();
-        const est = data.establishment;
-        const cat = data.category;
-        const val = data.val;
-        
-        let txDate = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('. de ', ' ');
-        if (data.date) {
-          const [y, m, d] = data.date.split('-');
-          if (y && m && d) {
-             const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-             txDate = `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
-          }
-        }
+        const transactions: any[] = data.transactions || [data];
 
-        setPendingQueue(prev => {
-          return [...prev, { 
+        const queueItems = transactions.map((tx: any, index: number) => {
+          let txDate = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('. de ', ' ');
+          if (tx.date) {
+            const [y, m, d] = tx.date.split('-');
+            if (y && m && d) {
+              const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+              txDate = `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
+            }
+          }
+
+          return {
             data: {
               date: txDate,
-              name: est,
-              cat: cat,
-              val: val,
-              status: data.status || 'Liquidado'
-            }, 
-            fileId 
-          }];
+              name: tx.establishment,
+              cat: tx.category,
+              val: tx.val,
+              status: tx.status || 'Liquidado'
+            },
+            fileId,
+            transactionIndex: index,
+            totalTransactions: transactions.length
+          };
         });
+
+        setFiles(prev => prev.map(f => 
+          f.id === fileId ? { ...f, name: transactions.length > 1 ? `${file.name} (${transactions.length} gastos)` : file.name } : f
+        ));
+
+        setPendingQueue(prev => [...prev, ...queueItems]);
       } catch (error) {
         console.error('Error processing file:', error);
         setFiles(prev => prev.filter(f => f.id !== fileId));
@@ -131,13 +137,16 @@ export const Inicio: React.FC = () => {
 
     addTransaction(tx);
 
-    setFiles(prev => prev.map(f => 
-      f.id === currentItem.fileId ? { 
-        ...f, 
-        status: 'done',
-        extractedData: { establishment: editedData.name, val: editedData.val, category: editedData.cat, date: editedData.date }
-      } : f
-    ));
+    const isLastFromFile = !pendingQueue.slice(1).some(q => q.fileId === currentItem.fileId);
+    if (isLastFromFile) {
+      setFiles(prev => prev.map(f => 
+        f.id === currentItem.fileId ? { 
+          ...f, 
+          status: 'done',
+          extractedData: { establishment: editedData.name, val: editedData.val, category: editedData.cat, date: editedData.date }
+        } : f
+      ));
+    }
 
     setPendingQueue(prev => prev.slice(1));
   };
@@ -145,7 +154,12 @@ export const Inicio: React.FC = () => {
   const handleCancelTransaction = () => {
     if (pendingQueue.length === 0) return;
     const currentItem = pendingQueue[0];
-    setFiles(prev => prev.filter(f => f.id !== currentItem.fileId));
+    
+    const isLastFromFile = !pendingQueue.slice(1).some(q => q.fileId === currentItem.fileId);
+    if (isLastFromFile) {
+      setFiles(prev => prev.filter(f => f.id !== currentItem.fileId));
+    }
+    
     setPendingQueue(prev => prev.slice(1));
   };
 
@@ -308,6 +322,9 @@ export const Inicio: React.FC = () => {
         isOpen={pendingQueue.length > 0}
         onClose={handleCancelTransaction}
         onSave={handleSaveTransaction}
+        onSkip={handleCancelTransaction}
+        queuePosition={pendingQueue.length > 0 ? pendingQueue[0].transactionIndex + 1 : undefined}
+        queueTotal={pendingQueue.length > 0 ? pendingQueue[0].totalTransactions : undefined}
         initialData={pendingQueue.length > 0 ? {
           ...pendingQueue[0].data,
           preview: files.find(f => f.id === pendingQueue[0].fileId)?.preview || null
