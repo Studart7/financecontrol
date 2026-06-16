@@ -70,6 +70,21 @@ export const useFinance = () => useContext(FinanceContext);
 
 const API_URL = 'http://localhost:3001/api';
 
+const MOCK_GOALS: Goal[] = [
+  { id: 1, title: 'Gastos Obrigatórios', meta: 803, color: '#C83C2C', iconKey: 'Inicio', iconColor: 'text-primary', iconBg: 'bg-primary/10', tipIconKey: 'Idea', tip: 'Despesas essenciais do dia a dia' },
+  { id: 2, title: 'Comida', meta: 800, color: '#6B5A4E', iconKey: 'Alimentacao', iconColor: 'text-secondary', iconBg: 'bg-secondary/10', tipIconKey: 'Idea', tip: 'Configure sua nova meta para começar a acompanhar.' },
+];
+
+const MOCK_TRANSACTIONS: Transaction[] = [
+  { id: 1, date: '16 Jun 2026', name: 'Mercado', cat: 'Gastos Obrigatórios', val: 150, status: 'Liquidado', iconKey: 'Inicio' },
+  { id: 2, date: '16 Jun 2026', name: 'Uber', cat: 'Gastos Obrigatórios', val: 50, status: 'Liquidado', iconKey: 'Inicio' },
+  { id: 3, date: '15 Jun 2026', name: 'Farmácia', cat: 'Saúde', val: 120, status: 'Liquidado', iconKey: 'History' },
+  { id: 4, date: '04 Jun 2026', name: 'DROGARIA SANTA LUZIA', cat: 'Saúde', val: 169.99, status: 'Pendente', iconKey: 'History' },
+  { id: 5, date: '15 Jun 2026', name: 'DROGARIA SANTA LUZIA (2/3)', cat: 'Saúde', val: 169.99, status: 'Pendente', iconKey: 'History' },
+  { id: 6, date: '04 Jun 2026', name: 'DROGARIA SANTA LUZIA', cat: 'Saúde', val: 169.99, status: 'Liquidado', iconKey: 'History' },
+  { id: 7, date: '12 Jun 2026', name: 'Restaurante', cat: 'Comida', val: 500, status: 'Liquidado', iconKey: 'Alimentacao' },
+];
+
 export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<SelectedMonth>({ month: now.getMonth(), year: now.getFullYear() });
@@ -87,6 +102,8 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
       }
     } catch (e) {
       console.error("Failed to fetch transactions:", e);
+      setTransactions(MOCK_TRANSACTIONS);
+      return MOCK_TRANSACTIONS;
     }
     return [];
   }, []);
@@ -100,6 +117,7 @@ export const FinanceProvider: React.FC<{children: ReactNode}> = ({ children }) =
       }
     } catch (e) {
       console.error("Failed to fetch goals:", e);
+      setGoals(MOCK_GOALS);
     }
   }, []);
 

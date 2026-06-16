@@ -219,10 +219,10 @@ export const FullAIChat: React.FC<FullAIChatProps> = ({ isOpen, isMini, onClose,
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
                     {[
-                      "Meus gastos deste mês?",
-                      "Crie uma meta de 3000",
-                      "Adicione 50 no Ifood",
-                      "Dicas para economizar"
+                      "Gastei 120 na farmácia ontem",
+                      "Guardei R$ 500 para a meta Viagem",
+                      "Adicione 150 no Mercado e 50 no Uber, e crie meta disso",
+                      "Aumente a meta Viagem para R$ 5.000"
                     ].map((suggestion, i) => (
                       <button
                         key={i}
