@@ -1,0 +1,27 @@
+# Ignorar arquivos grandes e irrelevantes para otimizar os tokens da IA
+node_modules/
+build/
+dist/
+coverage/
+.git/
+.agents/
+
+# Arquivos de Lock que consomem muitos tokens
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Imagens, PDFs e Banco de Dados
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+*.pdf
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
